@@ -1,0 +1,336 @@
+/* ==========================================================================
+   VOICE CHANNELS & VOICE STAGE GRID
+   ========================================================================== */
+
+.voice-stage-grid {
+  background-color: #111214;
+  padding: 16px;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 16px;
+  min-height: 220px;
+  max-height: 50vh;
+  overflow-y: auto;
+  border-bottom: 2px solid var(--border-subtle);
+  animation: fadeIn 0.2s ease-out;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(-8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.voice-card {
+  background-color: var(--bg-card);
+  border-radius: 8px;
+  height: 160px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  overflow: hidden;
+  border: 2px solid transparent;
+  transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+}
+
+/* Green border and glowing halo when active speaker speaks! */
+.voice-card.speaking {
+  border-color: var(--green);
+  box-shadow: 0 0 16px rgba(35, 165, 90, 0.4);
+}
+
+.voice-card-avatar {
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  background-color: var(--brand);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 28px;
+  font-weight: 700;
+  color: #fff;
+  margin-bottom: 8px;
+  position: relative;
+  background-size: cover;
+  background-position: center;
+  transition: transform var(--transition-fast);
+}
+
+.voice-card.speaking .voice-card-avatar {
+  transform: scale(1.05);
+}
+
+.voice-card-name {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-header);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.voice-card-tag {
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.voice-card-badges {
+  position: absolute;
+  bottom: 8px;
+  right: 8px;
+  display: flex;
+  gap: 4px;
+}
+
+.voice-badge-icon {
+  background-color: rgba(0, 0, 0, 0.6);
+  padding: 4px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+}
+
+/* Screen Share Tile */
+.voice-screenshare-tile {
+  grid-column: span 2;
+  background-color: #000;
+  border-radius: 8px;
+  height: 160px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  border: 1px solid var(--border-subtle);
+  overflow: hidden;
+}
+
+.screen-share-preview {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: radial-gradient(circle, rgba(88,101,242,0.15) 0%, rgba(0,0,0,0.8) 100%);
+}
+
+.screen-share-icon {
+  color: var(--brand);
+  margin-bottom: 8px;
+}
+
+.screen-share-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: #fff;
+}
+
+/* Video Elements for Screen Share & Webcam */
+.voice-video-element {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  background-color: #000;
+}
+
+.voice-camera-tile {
+  background-color: #1e1f22;
+  border-radius: 8px;
+  height: 160px;
+  position: relative;
+  overflow: hidden;
+  border: 1px solid var(--border-subtle);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.voice-camera-tile video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transform: scaleX(-1); /* Mirror camera */
+}
+
+.tile-overlay-tag {
+  position: absolute;
+  bottom: 8px;
+  left: 8px;
+  background-color: rgba(0, 0, 0, 0.7);
+  padding: 3px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  z-index: 2;
+}
+
+.tile-stop-btn {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  background-color: rgba(242, 63, 67, 0.85);
+  color: #fff;
+  border: none;
+  border-radius: 4px;
+  padding: 4px 10px;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+  z-index: 2;
+  transition: background-color var(--transition-fast);
+}
+
+.tile-stop-btn:hover {
+  background-color: #da373c;
+}
+
+/* ==========================================================================
+   LO-FI MUSIC STATION & PLAYER BAR
+   ========================================================================== */
+.lofi-radio-bar {
+  background: linear-gradient(135deg, rgba(88, 101, 242, 0.15) 0%, rgba(35, 165, 90, 0.1) 100%);
+  border: 1px solid rgba(88, 101, 242, 0.3);
+  border-radius: 8px;
+  padding: 8px 12px;
+  margin: 10px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  box-shadow: var(--elevation-low);
+}
+
+.lofi-radio-info {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  flex: 1;
+}
+
+.lofi-radio-icon {
+  font-size: 18px;
+  animation: lofiPulse 2s infinite ease-in-out;
+}
+
+@keyframes lofiPulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.15); }
+}
+
+.lofi-track-details {
+  min-width: 0;
+}
+
+.lofi-track-name {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-header);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.lofi-track-desc {
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.lofi-controls-wrap {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.lofi-play-btn {
+  background-color: var(--brand);
+  color: #fff;
+  border: none;
+  border-radius: 50%;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: transform var(--transition-fast), background-color var(--transition-fast);
+}
+
+.lofi-play-btn:hover {
+  background-color: var(--brand-hover);
+  transform: scale(1.05);
+}
+
+.lofi-track-select {
+  background-color: var(--bg-user-bar);
+  color: var(--text-normal);
+  border: 1px solid var(--border-subtle);
+  border-radius: 4px;
+  font-size: 11px;
+  padding: 4px 6px;
+  outline: none;
+  cursor: pointer;
+}
+
+.lofi-vol-slider {
+  width: 60px;
+  height: 4px;
+  accent-color: var(--brand);
+  cursor: pointer;
+}
+
+/* Equalizer Bars */
+.lofi-equalizer {
+  display: flex;
+  align-items: flex-end;
+  gap: 2px;
+  height: 14px;
+  margin-left: 4px;
+}
+
+.eq-bar {
+  width: 3px;
+  background-color: var(--green);
+  border-radius: 1px;
+  height: 4px;
+  transition: height 0.2s ease;
+}
+
+.lofi-playing .eq-bar:nth-child(1) { animation: eqJump 0.8s infinite ease-in-out; }
+.lofi-playing .eq-bar:nth-child(2) { animation: eqJump 0.6s infinite ease-in-out 0.2s; }
+.lofi-playing .eq-bar:nth-child(3) { animation: eqJump 0.7s infinite ease-in-out 0.1s; }
+
+@keyframes eqJump {
+  0%, 100% { height: 3px; }
+  50% { height: 14px; }
+}
+
+
+.voice-test-audio-btn {
+  margin-top: 6px;
+  background-color: rgba(35, 165, 90, 0.2);
+  border: 1px solid var(--green);
+  color: var(--green);
+  font-size: 11px;
+  font-weight: 600;
+  padding: 3px 8px;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: background-color 0.15s ease, transform 0.15s ease;
+}
+.voice-test-audio-btn:hover {
+  background-color: var(--green);
+  color: #ffffff;
+  transform: scale(1.05);
+}

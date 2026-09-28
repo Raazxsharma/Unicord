@@ -1,0 +1,153 @@
+/* ==========================================================================
+   GUILDS / SERVERS SIDEBAR
+   ========================================================================== */
+
+.guilds-sidebar {
+  width: 72px;
+  height: 100%;
+  background-color: var(--bg-guilds);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 12px 0 16px 0;
+  flex-shrink: 0;
+  z-index: 10;
+  user-select: none;
+  overflow-y: scroll;
+  overflow-x: hidden;
+}
+
+/* Hide scrollbar for server list for clean aesthetic */
+.guilds-sidebar::-webkit-scrollbar {
+  display: none;
+}
+
+.guild-item {
+  position: relative;
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+/* Discord's signature sliding pill indicator */
+.guild-pill {
+  position: absolute;
+  left: 0;
+  width: 4px;
+  height: 0px;
+  border-radius: 0 4px 4px 0;
+  background-color: #ffffff;
+  transition: height 0.18s cubic-bezier(0.2, 0, 0, 1), transform 0.18s ease;
+  transform: translateY(-50%);
+  top: 50%;
+}
+
+.guild-item:hover .guild-pill {
+  height: 20px;
+}
+
+.guild-item.active .guild-pill {
+  height: 40px;
+}
+
+.guild-item.unread .guild-pill {
+  height: 8px;
+}
+
+/* Server Icon Button */
+.guild-btn {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background-color: var(--bg-sidebar);
+  color: var(--text-normal);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: border-radius 0.2s cubic-bezier(0.2, 0, 0, 1), 
+              background-color 0.2s ease, 
+              color 0.2s ease;
+  position: relative;
+  overflow: hidden;
+  font-weight: 600;
+  font-size: 16px;
+  text-decoration: none;
+}
+
+.guild-item:hover .guild-btn,
+.guild-item.active .guild-btn {
+  border-radius: 16px;
+}
+
+/* Home / Direct Messages Discord Logo */
+.home-btn {
+  background-color: var(--bg-sidebar);
+  color: var(--text-normal);
+}
+.guild-item:hover .home-btn,
+.guild-item.active .home-btn {
+  background-color: var(--brand);
+  color: #ffffff;
+}
+
+/* Separator between Home and Servers */
+.guild-separator {
+  width: 32px;
+  height: 2px;
+  border-radius: 1px;
+  background-color: var(--border-subtle);
+  margin-bottom: 8px;
+  flex-shrink: 0;
+}
+
+/* Guild List dynamic container */
+.guilds-list {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+}
+
+/* Server with custom image or colored initials */
+.guild-btn.has-icon {
+  background-size: cover;
+  background-position: center;
+}
+
+.guild-item.active .guild-btn {
+  background-color: var(--brand);
+  color: #ffffff;
+}
+
+/* Unread Badge */
+.guild-badge {
+  position: absolute;
+  bottom: -2px;
+  right: 8px;
+  background-color: var(--red);
+  color: #ffffff;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 1px 5px;
+  border-radius: 10px;
+  border: 3px solid var(--bg-guilds);
+  pointer-events: none;
+}
+
+/* Add Server & Discover Buttons */
+.action-btn {
+  background-color: var(--bg-sidebar);
+  color: var(--green);
+}
+
+.guild-item:hover .add-btn {
+  background-color: var(--green);
+  color: #ffffff;
+}
+
+.guild-item:hover .discover-btn {
+  background-color: var(--green);
+  color: #ffffff;
+}

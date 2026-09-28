@@ -1,0 +1,246 @@
+/* ==========================================================================
+   MEMBERS SIDEBAR & USER PROFILE CARD POPOVER
+   ========================================================================== */
+
+.members-sidebar {
+  width: 240px;
+  background-color: var(--bg-sidebar);
+  height: 100%;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.members-scrollable {
+  flex: 1;
+  overflow-y: scroll;
+  overflow-x: hidden;
+  padding: 16px 8px 16px 16px;
+}
+
+.members-group-title {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-muted);
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  margin-bottom: 4px;
+  margin-top: 14px;
+  padding-left: 8px;
+}
+.members-group-title:first-child {
+  margin-top: 0;
+}
+
+.member-card-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 6px 8px;
+  border-radius: 4px;
+  cursor: pointer;
+  margin-bottom: 2px;
+  transition: background-color var(--transition-fast);
+}
+
+.member-card-row:hover {
+  background-color: var(--bg-modifier-hover);
+}
+
+.member-avatar-box {
+  width: 32px;
+  height: 32px;
+  position: relative;
+  flex-shrink: 0;
+}
+
+.member-avatar-circle {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background-color: var(--brand);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  font-weight: 700;
+  color: #fff;
+  background-size: cover;
+  background-position: center;
+}
+
+.member-info-col {
+  min-width: 0;
+  flex: 1;
+}
+
+.member-row-name {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-interactive);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.member-card-row:hover .member-row-name {
+  color: var(--text-interactive-hover);
+}
+
+.member-row-activity {
+  font-size: 12px;
+  color: var(--text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* User Profile Card Popover (Signature Discord Popout) */
+.member-profile-popover {
+  position: absolute;
+  width: 300px;
+  background-color: var(--bg-floating);
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: var(--elevation-high);
+  z-index: 10000;
+  animation: popoverFade 0.15s ease-out;
+}
+
+@keyframes popoverFade {
+  from { opacity: 0; transform: scale(0.95); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+.popover-banner {
+  height: 60px;
+  background-color: var(--brand);
+}
+
+.popover-avatar-wrap {
+  position: relative;
+  margin-top: -36px;
+  margin-left: 16px;
+  width: 80px;
+  height: 80px;
+}
+
+.popover-avatar {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  border: 6px solid var(--bg-floating);
+  background-color: var(--brand);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 32px;
+  font-weight: 700;
+  color: #fff;
+  background-size: cover;
+  background-position: center;
+}
+
+.popover-avatar-wrap .status-indicator {
+  width: 18px;
+  height: 18px;
+  border: 4px solid var(--bg-floating);
+  bottom: 2px;
+  right: 2px;
+}
+
+.popover-body {
+  padding: 12px 16px 16px 16px;
+}
+
+.popover-user-title {
+  display: flex;
+  align-items: baseline;
+  margin-bottom: 4px;
+}
+
+.popover-username {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--text-header);
+}
+
+.popover-discriminator {
+  font-size: 14px;
+  color: var(--text-muted);
+  margin-left: 4px;
+}
+
+.popover-custom-status {
+  font-size: 13px;
+  color: var(--text-normal);
+  margin-bottom: 12px;
+}
+
+.popover-divider {
+  height: 1px;
+  background-color: var(--border-subtle);
+  margin: 12px 0;
+}
+
+.popover-section-label {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  margin-bottom: 6px;
+}
+
+.popover-about {
+  font-size: 13px;
+  color: var(--text-normal);
+  line-height: 1.4;
+  margin-bottom: 12px;
+}
+
+.popover-roles-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-bottom: 14px;
+}
+
+.popover-role-tag {
+  background-color: var(--bg-user-bar);
+  padding: 3px 8px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-normal);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.popover-role-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+
+.popover-footer {
+  margin-top: 8px;
+}
+
+.popover-dm-btn {
+  width: 100%;
+  background-color: var(--brand);
+  color: #fff;
+  padding: 8px;
+  border-radius: 4px;
+  font-size: 13px;
+  font-weight: 600;
+  transition: background-color var(--transition-fast);
+}
+.popover-dm-btn:hover {
+  background-color: var(--brand-hover);
+}

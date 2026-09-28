@@ -1,0 +1,283 @@
+/* ==========================================================================
+   DISCORD CLONE - MAIN DESIGN SYSTEM & THEME TOKENS
+   ========================================================================== */
+
+:root {
+  /* Brand Colors */
+  --brand: #5865F2;
+  --brand-hover: #4752C4;
+  --brand-active: #3c45a5;
+  --brand-500: #5865F2;
+  --green: #23a55a;
+  --green-hover: #1f9250;
+  --yellow: #f0b232;
+  --red: #f23f43;
+  --red-hover: #da373c;
+  --nitro-pink: #f47fff;
+
+  /* Typography */
+  --font-primary: "gg sans", "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  --font-code: "JetBrains Mono", Consolas, "Courier New", Courier, monospace;
+
+  /* Transitions */
+  --transition-fast: 0.15s ease;
+  --transition-normal: 0.2s ease-in-out;
+  --transition-spring: 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+
+  /* Shadows */
+  --elevation-low: 0 1px 0 rgba(4, 4, 5, 0.2), 0 1.5px 0 rgba(6, 6, 7, 0.05), 0 2px 0 rgba(4, 4, 5, 0.05);
+  --elevation-medium: 0 4px 4px rgba(0, 0, 0, 0.16);
+  --elevation-high: 0 8px 16px rgba(0, 0, 0, 0.24);
+  --elevation-stroke: 0 0 0 1px rgba(4, 4, 5, 0.15);
+}
+
+/* ----------------- DARK THEME (DEFAULT) ----------------- */
+[data-theme="dark"] {
+  --bg-guilds: #1e1f22;
+  --bg-sidebar: #2b2d31;
+  --bg-chat: #313338;
+  --bg-user-bar: #232428;
+  --bg-input: #383a40;
+  --bg-modal: #313338;
+  --bg-modal-footer: #2b2d31;
+  --bg-card: #2b2d31;
+  --bg-floating: #232428;
+  --bg-modifier-hover: rgba(78, 80, 88, 0.2);
+  --bg-modifier-active: rgba(78, 80, 88, 0.3);
+  --bg-modifier-selected: rgba(78, 80, 88, 0.4);
+
+  --text-normal: #dbdee1;
+  --text-muted: #949ba4;
+  --text-header: #f2f3f5;
+  --text-interactive: #b5bac1;
+  --text-interactive-hover: #dbdee1;
+  --text-interactive-active: #ffffff;
+  --text-link: #00a8fc;
+  --text-positive: #23a55a;
+  --text-warning: #f0b232;
+  --text-danger: #fa777c;
+
+  --border-subtle: rgba(255, 255, 255, 0.06);
+  --scrollbar-thumb: #1a1b1e;
+  --scrollbar-track: #2b2d31;
+}
+
+/* ----------------- MIDNIGHT THEME (OLED) ----------------- */
+[data-theme="midnight"] {
+  --bg-guilds: #000000;
+  --bg-sidebar: #0b0b0c;
+  --bg-chat: #111214;
+  --bg-user-bar: #070708;
+  --bg-input: #1e1f22;
+  --bg-modal: #111214;
+  --bg-modal-footer: #0b0b0c;
+  --bg-card: #16171a;
+  --bg-floating: #0b0b0c;
+  --bg-modifier-hover: rgba(255, 255, 255, 0.06);
+  --bg-modifier-active: rgba(255, 255, 255, 0.1);
+  --bg-modifier-selected: rgba(255, 255, 255, 0.15);
+
+  --text-normal: #e0e1e5;
+  --text-muted: #80848e;
+  --text-header: #ffffff;
+  --text-interactive: #b5bac1;
+  --text-interactive-hover: #ffffff;
+  --text-interactive-active: #ffffff;
+  --text-link: #00a8fc;
+
+  --border-subtle: rgba(255, 255, 255, 0.04);
+  --scrollbar-thumb: #000000;
+  --scrollbar-track: #0b0b0c;
+}
+
+/* ----------------- LIGHT THEME ----------------- */
+[data-theme="light"] {
+  --bg-guilds: #e3e5e8;
+  --bg-sidebar: #f2f3f5;
+  --bg-chat: #ffffff;
+  --bg-user-bar: #ebedef;
+  --bg-input: #ebedef;
+  --bg-modal: #ffffff;
+  --bg-modal-footer: #f2f3f5;
+  --bg-card: #f2f3f5;
+  --bg-floating: #ffffff;
+  --bg-modifier-hover: rgba(116, 127, 141, 0.08);
+  --bg-modifier-active: rgba(116, 127, 141, 0.16);
+  --bg-modifier-selected: rgba(116, 127, 141, 0.24);
+
+  --text-normal: #313338;
+  --text-muted: #5c5e66;
+  --text-header: #060607;
+  --text-interactive: #4e5058;
+  --text-interactive-hover: #313338;
+  --text-interactive-active: #060607;
+  --text-link: #006ce7;
+
+  --border-subtle: rgba(0, 0, 0, 0.08);
+  --scrollbar-thumb: #c4c9ce;
+  --scrollbar-track: #f2f3f5;
+}
+
+/* ----------------- RESET & GLOBAL BASE ----------------- */
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  user-select: none;
+  -webkit-font-smoothing: antialiased;
+}
+
+html, body {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background-color: var(--bg-guilds);
+  color: var(--text-normal);
+  font-family: var(--font-primary);
+  font-size: 15px;
+  line-height: 1.35;
+}
+
+button {
+  font-family: inherit;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  outline: none;
+  color: inherit;
+}
+
+input, textarea {
+  font-family: inherit;
+  border: none;
+  outline: none;
+  background: transparent;
+  color: var(--text-normal);
+  user-select: text;
+}
+
+/* Scrollbars */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--scrollbar-thumb);
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #111214;
+}
+
+/* ----------------- MAIN APP LAYOUT ----------------- */
+.app-layout {
+  display: flex;
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden;
+  position: relative;
+}
+
+/* ----------------- TOOLTIPS ----------------- */
+[data-tooltip] {
+  position: relative;
+}
+
+[data-tooltip]::before {
+  content: attr(data-tooltip);
+  position: absolute;
+  top: 50%;
+  left: calc(100% + 12px);
+  transform: translateY(-50%) scale(0.9);
+  padding: 6px 12px;
+  background-color: #111214;
+  color: #f2f3f5;
+  font-size: 13px;
+  font-weight: 600;
+  border-radius: 6px;
+  white-space: nowrap;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.15s ease, transform 0.15s ease;
+  z-index: 99999;
+  box-shadow: var(--elevation-medium);
+}
+
+[data-tooltip]::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: calc(100% + 6px);
+  transform: translateY(-50%) scale(0.9);
+  border-width: 5px;
+  border-style: solid;
+  border-color: transparent #111214 transparent transparent;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.15s ease, transform 0.15s ease;
+  z-index: 99999;
+}
+
+[data-tooltip]:hover::before,
+[data-tooltip]:hover::after {
+  opacity: 1;
+  transform: translateY(-50%) scale(1);
+}
+
+/* ----------------- BUTTON UTILITIES ----------------- */
+.btn-primary {
+  background-color: var(--brand);
+  color: #ffffff;
+  padding: 10px 24px;
+  border-radius: 4px;
+  font-size: 14px;
+  font-weight: 500;
+  transition: background-color var(--transition-fast);
+}
+.btn-primary:hover {
+  background-color: var(--brand-hover);
+}
+.btn-primary:active {
+  background-color: var(--brand-active);
+}
+
+.btn-secondary {
+  background-color: transparent;
+  color: var(--text-normal);
+  padding: 10px 20px;
+  font-size: 14px;
+  font-weight: 500;
+  transition: text-decoration var(--transition-fast);
+}
+.btn-secondary:hover {
+  text-decoration: underline;
+}
+
+/* Form Styles */
+.form-group {
+  margin-bottom: 16px;
+}
+.form-label {
+  display: block;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  margin-bottom: 8px;
+}
+.form-input, .form-textarea {
+  width: 100%;
+  background-color: var(--bg-user-bar);
+  padding: 10px;
+  border-radius: 4px;
+  color: var(--text-normal);
+  font-size: 14px;
+  transition: border-color var(--transition-fast);
+}
+.form-input:focus, .form-textarea:focus {
+  outline: 1px solid var(--brand);
+}

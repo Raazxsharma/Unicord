@@ -1,0 +1,493 @@
+/* ==========================================================================
+   UNICORD STUDY WHITEBOARD (DISCORD ACTIVITY) STYLES
+   ========================================================================== */
+
+/* Fullscreen Activity Backdrop */
+.whiteboard-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background-color: rgba(0, 0, 0, 0.82);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100000;
+  animation: wbFadeIn 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes wbFadeIn {
+  from { opacity: 0; transform: scale(0.98); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+/* Whiteboard Window Container */
+.whiteboard-container {
+  width: 95vw;
+  max-width: 1320px;
+  height: 90vh;
+  max-height: 860px;
+  background-color: #1e1f22;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(255, 255, 255, 0.05);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  position: relative;
+}
+
+/* Header Bar */
+.whiteboard-header {
+  height: 52px;
+  background-color: #2b2d31;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 16px;
+  flex-shrink: 0;
+  user-select: none;
+}
+
+.whiteboard-title-group {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.whiteboard-badge {
+  background: linear-gradient(135deg, #5865f2, #eb459e);
+  color: #ffffff;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  padding: 3px 8px;
+  border-radius: 4px;
+  text-transform: uppercase;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.whiteboard-title {
+  font-size: 16px;
+  font-weight: 700;
+  color: #f2f3f5;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.whiteboard-channel-tag {
+  font-size: 12px;
+  color: #949ba4;
+  background-color: rgba(255, 255, 255, 0.06);
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-weight: 500;
+}
+
+.whiteboard-collab-avatars {
+  display: flex;
+  align-items: center;
+  margin-left: 12px;
+}
+
+.wb-collab-avatar {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  border: 2px solid #2b2d31;
+  font-size: 10px;
+  font-weight: 700;
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-left: -6px;
+}
+.wb-collab-avatar:first-child {
+  margin-left: 0;
+}
+
+.wb-collab-label {
+  font-size: 12px;
+  color: #23a55a;
+  margin-left: 8px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.wb-collab-label::before {
+  content: '';
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background-color: #23a55a;
+  box-shadow: 0 0 8px #23a55a;
+}
+
+/* Header Actions */
+.whiteboard-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.wb-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  font-size: 13px;
+  font-weight: 600;
+  border-radius: 4px;
+  transition: all 0.15s ease;
+  cursor: pointer;
+  border: none;
+  outline: none;
+}
+
+.wb-btn-secondary {
+  background-color: rgba(255, 255, 255, 0.08);
+  color: #dbdee1;
+}
+.wb-btn-secondary:hover {
+  background-color: rgba(255, 255, 255, 0.14);
+  color: #ffffff;
+}
+
+.wb-btn-primary {
+  background-color: #5865f2;
+  color: #ffffff;
+}
+.wb-btn-primary:hover {
+  background-color: #4752c4;
+  box-shadow: 0 4px 12px rgba(88, 101, 242, 0.35);
+}
+
+.wb-btn-danger {
+  background-color: transparent;
+  color: #fa777c;
+}
+.wb-btn-danger:hover {
+  background-color: rgba(242, 63, 67, 0.15);
+  color: #f23f43;
+}
+
+.wb-btn-close {
+  background-color: transparent;
+  color: #949ba4;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  cursor: pointer;
+}
+.wb-btn-close:hover {
+  background-color: rgba(255, 255, 255, 0.1);
+  color: #ffffff;
+}
+
+/* Whiteboard Body & Canvas Viewport */
+.whiteboard-body {
+  flex: 1;
+  position: relative;
+  background-color: #1e1f22;
+  /* Dot matrix engineering grid */
+  background-image: radial-gradient(rgba(255, 255, 255, 0.1) 1.2px, transparent 1.2px);
+  background-size: 24px 24px;
+  background-position: 0 0;
+  overflow: hidden;
+  cursor: crosshair;
+}
+
+#study-whiteboard-canvas {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+/* Floating Dock Toolbar */
+.whiteboard-floating-toolbar {
+  position: absolute;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(35, 36, 40, 0.92);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  padding: 6px 10px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.5);
+  z-index: 20;
+  user-select: none;
+}
+
+.wb-tool-group {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.wb-tool-btn {
+  width: 38px;
+  height: 38px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #949ba4;
+  background-color: transparent;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  position: relative;
+}
+
+.wb-tool-btn:hover {
+  background-color: rgba(255, 255, 255, 0.08);
+  color: #f2f3f5;
+}
+
+.wb-tool-btn.active {
+  background-color: #5865f2;
+  color: #ffffff;
+  box-shadow: 0 2px 8px rgba(88, 101, 242, 0.4);
+}
+
+.wb-toolbar-divider {
+  width: 1px;
+  height: 24px;
+  background-color: rgba(255, 255, 255, 0.12);
+  margin: 0 2px;
+}
+
+/* Color Palette Swatches */
+.wb-color-group {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.wb-color-swatch {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  cursor: pointer;
+  border: 2px solid transparent;
+  transition: transform 0.15s ease, border-color 0.15s ease;
+}
+
+.wb-color-swatch:hover {
+  transform: scale(1.18);
+}
+
+.wb-color-swatch.active {
+  border-color: #ffffff;
+  transform: scale(1.22);
+  box-shadow: 0 0 10px rgba(255, 255, 255, 0.3);
+}
+
+/* Stroke Thickness Options */
+.wb-size-group {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.wb-size-btn {
+  width: 30px;
+  height: 30px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: transparent;
+  cursor: pointer;
+}
+.wb-size-btn:hover {
+  background-color: rgba(255, 255, 255, 0.08);
+}
+.wb-size-btn.active {
+  background-color: rgba(88, 101, 242, 0.2);
+  outline: 1px solid #5865f2;
+}
+
+.wb-size-dot {
+  background-color: #dbdee1;
+  border-radius: 50%;
+}
+.wb-size-thin .wb-size-dot { width: 4px; height: 4px; }
+.wb-size-medium .wb-size-dot { width: 8px; height: 8px; }
+.wb-size-thick .wb-size-dot { width: 14px; height: 14px; }
+
+/* Sticky Notes on Canvas */
+.wb-stickies-container {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.wb-sticky-note {
+  position: absolute;
+  width: 190px;
+  min-height: 140px;
+  padding: 12px 14px;
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35), 0 2px 6px rgba(0, 0, 0, 0.2);
+  pointer-events: auto;
+  cursor: move;
+  display: flex;
+  flex-direction: column;
+  color: #1e1f22;
+  font-family: var(--font-primary);
+  transform: rotate(-1.5deg);
+  transition: box-shadow 0.15s ease, transform 0.15s ease;
+  user-select: none;
+}
+
+.wb-sticky-note:hover {
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.45);
+  transform: rotate(0deg) scale(1.02);
+  z-index: 15;
+}
+
+.wb-sticky-yellow { background-color: #fee75c; border-top: 4px solid #e0c83a; }
+.wb-sticky-cyan   { background-color: #79e2ff; border-top: 4px solid #3ac2e8; }
+.wb-sticky-pink   { background-color: #ff9ee2; border-top: 4px solid #e270be; }
+.wb-sticky-green  { background-color: #a3f7bf; border-top: 4px solid #6dd993; }
+
+.wb-sticky-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 6px;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  opacity: 0.7;
+}
+
+.wb-sticky-delete {
+  background: transparent;
+  border: none;
+  font-size: 14px;
+  cursor: pointer;
+  color: #1e1f22;
+  opacity: 0.6;
+  padding: 0 2px;
+}
+.wb-sticky-delete:hover {
+  opacity: 1;
+}
+
+.wb-sticky-text {
+  flex: 1;
+  font-size: 13px;
+  line-height: 1.4;
+  outline: none;
+  border: none;
+  background: transparent;
+  color: #1e1f22;
+  font-weight: 500;
+  cursor: text;
+  word-break: break-word;
+}
+
+/* Floating In-Place Text Editor */
+.wb-text-overlay-input {
+  position: absolute;
+  background: rgba(30, 31, 34, 0.95);
+  color: #f2f3f5;
+  border: 1px solid #5865f2;
+  border-radius: 6px;
+  padding: 6px 10px;
+  font-size: 16px;
+  font-family: var(--font-primary);
+  outline: none;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5);
+  z-index: 30;
+  min-width: 140px;
+}
+
+/* Top Template Selector Bar */
+.wb-templates-bar {
+  position: absolute;
+  top: 14px;
+  left: 16px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(35, 36, 40, 0.85);
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 8px;
+  padding: 4px 8px;
+  z-index: 10;
+}
+
+.wb-template-label {
+  font-size: 11px;
+  font-weight: 700;
+  color: #949ba4;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-right: 2px;
+}
+
+.wb-template-pill {
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #dbdee1;
+  background: transparent;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  border: none;
+}
+.wb-template-pill:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: #ffffff;
+}
+.wb-template-pill.active {
+  background: #5865f2;
+  color: #ffffff;
+}
+
+/* Whiteboard Toast Notification */
+.wb-toast-message {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  background: rgba(35, 36, 40, 0.95);
+  border: 1px solid #23a55a;
+  color: #ffffff;
+  padding: 8px 16px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+  z-index: 50;
+  animation: wbFadeIn 0.2s ease;
+}

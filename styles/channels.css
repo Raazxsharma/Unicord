@@ -1,0 +1,480 @@
+/* ==========================================================================
+   CHANNELS SIDEBAR & USER CONTROLS
+   ========================================================================== */
+
+.sidebar-container {
+  width: 240px;
+  height: 100%;
+  background-color: var(--bg-sidebar);
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+  position: relative;
+  border-top-left-radius: 8px;
+  overflow: hidden;
+}
+
+/* 1. Server Header */
+.server-header {
+  height: 48px;
+  padding: 0 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid var(--border-subtle);
+  cursor: pointer;
+  transition: background-color var(--transition-fast);
+  box-shadow: var(--elevation-low);
+  flex-shrink: 0;
+}
+
+.server-header:hover {
+  background-color: var(--bg-modifier-hover);
+}
+
+.server-name {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text-header);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.server-menu-btn {
+  color: var(--text-interactive);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform var(--transition-fast);
+}
+
+.server-header.open .server-menu-btn {
+  transform: rotate(180deg);
+}
+
+/* Server Dropdown Menu */
+.server-dropdown-menu {
+  position: absolute;
+  top: 54px;
+  left: 10px;
+  width: 220px;
+  background-color: var(--bg-floating);
+  border-radius: 4px;
+  padding: 6px 8px;
+  box-shadow: var(--elevation-high);
+  z-index: 1000;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.menu-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 10px;
+  border-radius: 2px;
+  color: var(--text-interactive);
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color var(--transition-fast), color var(--transition-fast);
+}
+
+.menu-item:hover {
+  background-color: var(--brand);
+  color: #ffffff;
+}
+
+.menu-item.highlight {
+  color: var(--brand);
+}
+
+.menu-item.highlight:hover {
+  background-color: var(--brand);
+  color: #ffffff;
+}
+
+.menu-item.danger {
+  color: var(--text-danger);
+}
+
+.menu-item.danger:hover {
+  background-color: var(--red);
+  color: #ffffff;
+}
+
+.menu-divider {
+  height: 1px;
+  background-color: var(--border-subtle);
+  margin: 4px 0;
+}
+
+/* DM Header */
+.dm-header {
+  height: 48px;
+  padding: 0 10px;
+  display: flex;
+  align-items: center;
+  border-bottom: 1px solid var(--border-subtle);
+  box-shadow: var(--elevation-low);
+  flex-shrink: 0;
+}
+
+.dm-search-btn {
+  width: 100%;
+  height: 28px;
+  background-color: var(--bg-guilds);
+  border-radius: 4px;
+  padding: 0 8px;
+  color: var(--text-muted);
+  font-size: 13px;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+}
+
+/* Scrollable channels list */
+.sidebar-scrollable {
+  flex: 1;
+  overflow-y: overlay;
+  overflow-x: hidden;
+  padding: 10px 8px;
+}
+
+/* Channels Categories */
+.category-wrapper {
+  margin-top: 14px;
+}
+.category-wrapper:first-child {
+  margin-top: 4px;
+}
+
+.category-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 4px 6px 4px 2px;
+  color: var(--text-muted);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.25px;
+  cursor: pointer;
+  text-transform: uppercase;
+}
+
+.category-header:hover {
+  color: var(--text-interactive-hover);
+}
+
+.category-title-wrap {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.category-arrow {
+  width: 12px;
+  height: 12px;
+  transition: transform var(--transition-fast);
+}
+
+.category-wrapper.collapsed .category-arrow {
+  transform: rotate(-90deg);
+}
+
+.category-wrapper.collapsed .channels-group {
+  display: none;
+}
+
+.category-add-btn {
+  color: var(--text-muted);
+  padding: 2px;
+  display: flex;
+  align-items: center;
+}
+.category-add-btn:hover {
+  color: var(--text-interactive-hover);
+}
+
+/* Channel Items */
+.channel-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 8px;
+  margin: 1px 0;
+  border-radius: 4px;
+  color: var(--text-interactive);
+  cursor: pointer;
+  font-size: 15px;
+  font-weight: 500;
+  transition: background-color var(--transition-fast), color var(--transition-fast);
+}
+
+.channel-item:hover {
+  background-color: var(--bg-modifier-hover);
+  color: var(--text-interactive-hover);
+}
+
+.channel-item.active {
+  background-color: var(--bg-modifier-selected);
+  color: var(--text-interactive-active);
+}
+
+.channel-item.unread .channel-name {
+  color: var(--text-interactive-active);
+  font-weight: 700;
+}
+
+.channel-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  overflow: hidden;
+}
+
+.channel-icon {
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+  color: var(--text-muted);
+}
+
+.channel-item.active .channel-icon,
+.channel-item:hover .channel-icon {
+  color: var(--text-interactive-hover);
+}
+
+.channel-name {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Voice Channel Connected Members List under the channel item */
+.voice-members-list {
+  padding-left: 28px;
+  margin-top: 2px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.voice-member-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 3px 6px;
+  border-radius: 4px;
+  color: var(--text-muted);
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.voice-member-item:hover {
+  background-color: var(--bg-modifier-hover);
+  color: var(--text-normal);
+}
+
+.voice-member-avatar {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  position: relative;
+  background-color: var(--brand);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 700;
+  color: #fff;
+  background-size: cover;
+  background-position: center;
+  transition: box-shadow var(--transition-fast);
+}
+
+/* Green Pulsing Halo when Speaking */
+.voice-member-avatar.speaking,
+.voice-member-item.speaking .voice-member-avatar {
+  box-shadow: 0 0 0 2px var(--green);
+}
+
+.voice-member-name {
+  flex: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* 2. Voice Connected Status Panel */
+.voice-connection-panel {
+  background-color: var(--bg-user-bar);
+  padding: 8px 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.voice-status-info {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.voice-status-title {
+  color: var(--green);
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.voice-channel-current {
+  color: var(--text-muted);
+  font-size: 12px;
+  line-height: 1.2;
+  cursor: pointer;
+}
+.voice-channel-current:hover {
+  text-decoration: underline;
+}
+
+.voice-status-actions {
+  display: flex;
+  gap: 4px;
+}
+
+.voice-panel-btn {
+  width: 32px;
+  height: 32px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-interactive);
+  transition: background-color var(--transition-fast), color var(--transition-fast);
+}
+
+.voice-panel-btn:hover {
+  background-color: var(--bg-modifier-hover);
+  color: var(--text-interactive-hover);
+}
+
+.voice-panel-btn.disconnect:hover {
+  color: var(--red);
+}
+
+/* 3. User Control Bottom Bar */
+.user-control-bar {
+  height: 52px;
+  background-color: var(--bg-user-bar);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 8px;
+  flex-shrink: 0;
+}
+
+.user-summary {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 6px;
+  margin-left: -4px;
+  border-radius: 4px;
+  cursor: pointer;
+  flex: 1;
+  min-width: 0;
+  transition: background-color var(--transition-fast);
+}
+
+.user-summary:hover {
+  background-color: var(--bg-modifier-hover);
+}
+
+.avatar-wrap {
+  position: relative;
+  flex-shrink: 0;
+}
+
+.user-avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background-color: var(--brand);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  font-weight: 700;
+  color: #fff;
+  background-size: cover;
+  background-position: center;
+}
+
+/* Online / Idle / DND status indicator circle */
+.status-indicator {
+  position: absolute;
+  bottom: -2px;
+  right: -2px;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  border: 2px solid var(--bg-user-bar);
+}
+
+.status-indicator.online { background-color: var(--green); }
+.status-indicator.idle { background-color: var(--yellow); }
+.status-indicator.dnd { background-color: var(--red); }
+.status-indicator.invisible, .status-indicator.offline { background-color: #80848e; }
+
+.user-names {
+  min-width: 0;
+}
+
+.display-name {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-header);
+  line-height: 1.2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.custom-status-text {
+  font-size: 12px;
+  color: var(--text-muted);
+  line-height: 1.2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.user-controls {
+  display: flex;
+  align-items: center;
+}
+
+.ctrl-btn {
+  width: 32px;
+  height: 32px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-interactive);
+  transition: background-color var(--transition-fast), color var(--transition-fast);
+}
+
+.ctrl-btn:hover {
+  background-color: var(--bg-modifier-hover);
+  color: var(--text-interactive-hover);
+}
+
+.ctrl-btn.active-off {
+  color: var(--red);
+}

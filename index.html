@@ -9035,14 +9035,20 @@ document.addEventListener('DOMContentLoaded', () => {
       const guildId = modal?.getAttribute('data-guild-id') || window.stateManager.state.activeGuildId;
       const newName = inputServerName?.value.trim() || 'My Server';
       const newInitials = inputServerInitials?.value.trim().toUpperCase() || newName.substring(0, 2).toUpperCase();
+      const previewIcon = document.getElementById('server-edit-preview-icon');
+      const currentColor = previewIcon ? previewIcon.style.backgroundColor : selectedServerColor;
 
       window.stateManager.updateGuild(guildId, {
         name: newName,
         initials: newInitials,
-        color: selectedServerColor
+        color: currentColor
       });
 
       window.uiController.renderAll();
+      if (guildId === window.stateManager.state.activeGuildId) {
+        const serverNameLabel = document.getElementById('server-name-label');
+        if (serverNameLabel) serverNameLabel.textContent = newName;
+      }
       window.uiController.closeServerSettingsModal();
     };
   }

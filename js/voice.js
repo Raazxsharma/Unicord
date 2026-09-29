@@ -113,6 +113,13 @@ class VoiceController {
       window.audioEngine.playUnmuteSound();
     }
 
+    // Actually enable or disable the live microphone track
+    if (window.audioEngine?.micStream) {
+      window.audioEngine.micStream.getAudioTracks().forEach(track => {
+        track.enabled = !isMuted;
+      });
+    }
+
     // Update in voice participants
     const chId = window.stateManager.state.activeVoiceChannelId;
     if (chId && window.stateManager.state.voiceParticipants[chId]) {
@@ -120,8 +127,15 @@ class VoiceController {
       if (me) me.isMuted = isMuted;
     }
 
+    // Broadcast mute state to other users in real time
+    if (window.networkEngine) {
+      window.networkEngine.broadcastMuteState(isMuted);
+    }
+
     window.stateManager.saveState();
     window.uiController.updateUserBarControls();
+    window.uiController.renderVoiceStage();
+    window.uiController.renderChannels();
   }
 
   toggleDeafen() {
@@ -132,10 +146,22 @@ class VoiceController {
 
     if (isDeafened) {
       window.stateManager.state.isMuted = true;
+      if (window.audioEngine?.micStream) {
+        window.audioEngine.micStream.getAudioTracks().forEach(track => {
+          track.enabled = false;
+        });
+      }
+    }
+
+    // Mute/unmute remote incoming audio
+    if (window.networkEngine) {
+      window.networkEngine.setRemoteAudioMuted(isDeafened);
     }
 
     window.stateManager.saveState();
     window.uiController.updateUserBarControls();
+    window.uiController.renderVoiceStage();
+    window.uiController.renderChannels();
   }
 
   async toggleCamera() {
@@ -252,8 +278,13 @@ class VoiceController {
     const participants = window.stateManager.state.voiceParticipants[channelId];
     if (!participants || participants.length <= 1) return;
 
-    // Pick a classmate participant who is not currently muted
-    const classmates = participants.filter(p => p.id !== window.stateManager.state.currentUser.id && !p.isMuted);
+    // Pick only simulated/bot classmates, NEVER take over a real peer's voice!
+    const classmates = participants.filter(p => 
+      p.id !== window.stateManager.state.currentUser.id && 
+      !p.isMuted && 
+      !p.peerId && 
+      !p.isRealPeer
+    );
     if (classmates.length === 0) return;
 
     const speaker = classmates[Math.floor(Math.random() * classmates.length)];

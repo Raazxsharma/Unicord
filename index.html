@@ -6278,8 +6278,8 @@ window.stateManager = new StateManager();
 // --- network.js ---
 /**
  * UniCord Real-Time Cross-Device Network Engine
- * Uses public MQTT WebSocket broker for chat & presence synchronization,
- * and PeerJS WebRTC with robust STUN traversal for live audio calls.
+ * Uses public MQTT WebSocket broker for real-time presence & signaling,
+ * and PeerJS WebRTC with robust Google STUN + OpenRelay TURN servers for crystal-clear live audio calls.
  */
 
 class NetworkEngine {
@@ -6288,11 +6288,17 @@ class NetworkEngine {
     this.peer = null;
     this.peerId = null;
     this.activeVoiceCallPeers = new Map(); // peerId -> MediaConnection
-    this.remoteAudioElements = new Map();  // peerId -> HTMLAudioElement
-    this.remotePresence = new Map();       // userId -> { name, channelId, peerId, lastSeen, avatarBg, avatarText }
+    this.remoteAudioElements = new Map();  // peerId -> HTMLAudioElement (keeps WebRTC clock active)
+    this.remoteAudioNodes = new Map();     // peerId -> { source, analyser, gain }
+    this.remotePresence = new Map();       // userId -> { name, channelId, peerId, lastSeen, avatarBg, avatarText, isMuted }
     this.heartbeatTimer = null;
+    this.callRetryTimer = null;
     this.userId = this.getOrCreateUserId();
+    this.sessionId = this.getOrCreateSessionId();
     this.isConnected = false;
+
+    // Attach global user interaction handler to guarantee AudioContext is never suspended
+    this.setupAudioUnlockListeners();
   }
 
   getOrCreateUserId() {
@@ -6300,27 +6306,57 @@ class NetworkEngine {
     if (!id) {
       id = 'student_' + Math.random().toString(36).substring(2, 8);
       localStorage.setItem('unicord_unique_user_id', id);
-
-      const me = window.stateManager?.state?.currentUser;
-      if (me && (me.name === 'Aarav (BBA)' || !me.name)) {
-        const studentNames = ['Student', 'Hosteller', 'DayScholar', 'CampusPeer'];
+    }
+    // Ensure state currentUser ID matches network userId consistently
+    const me = window.stateManager?.state?.currentUser;
+    if (me) {
+      me.id = id;
+      if (!me.name || me.name === 'Alex' || me.name === 'Aarav (BBA)') {
+        const studentNames = ['Student', 'Hosteller', 'DayScholar', 'CampusPeer', 'ProGamer', 'ApexMember'];
         const randomNum = Math.floor(100 + Math.random() * 900);
         const randomPrefix = studentNames[Math.floor(Math.random() * studentNames.length)];
         me.name = `${randomPrefix}_${randomNum}`;
         me.avatarText = me.name.substring(0, 2).toUpperCase();
-        me.id = id;
-        window.stateManager.saveState();
       }
+      window.stateManager.saveState();
     }
     return id;
+  }
+
+  getOrCreateSessionId() {
+    let sess = sessionStorage.getItem('unicord_session_tab_id');
+    if (!sess) {
+      sess = Math.random().toString(36).substring(2, 7);
+      sessionStorage.setItem('unicord_session_tab_id', sess);
+    }
+    return sess;
+  }
+
+  setupAudioUnlockListeners() {
+    const unlock = () => {
+      if (window.audioEngine?.ctx && window.audioEngine.ctx.state === 'suspended') {
+        window.audioEngine.ctx.resume().catch(() => {});
+      }
+      this.remoteAudioElements.forEach(audio => {
+        if (audio.paused) {
+          audio.play().catch(() => {});
+        }
+      });
+    };
+    ['click', 'touchstart', 'keydown'].forEach(evt => {
+      document.addEventListener(evt, unlock, { passive: true });
+    });
   }
 
   init() {
     this.initMQTT();
     this.initPeerJS();
+    this.startCallRetryMonitor();
   }
 
-  // 1. MQTT WEBSOCKET CONNECTION FOR REAL-TIME CHAT & PRESENCE
+  // -------------------------------------------------------------
+  // 1. MQTT WEBSOCKET CONNECTION FOR CHAT & PRESENCE SIGNALING
+  // -------------------------------------------------------------
   initMQTT() {
     if (typeof mqtt === 'undefined') {
       console.warn('[UniCord Net] MQTT library not loaded, skipping cross-device sync.');
@@ -6328,14 +6364,14 @@ class NetworkEngine {
     }
 
     const brokerUrl = 'wss://broker.emqx.io:8084/mqtt';
-    const clientId = 'unicord_' + this.userId + '_' + Math.random().toString(16).substring(2, 8);
+    const clientId = 'unicord_' + this.userId + '_' + this.sessionId;
 
     try {
       this.mqttClient = mqtt.connect(brokerUrl, {
         clientId,
         clean: true,
-        connectTimeout: 5000,
-        reconnectPeriod: 2500
+        connectTimeout: 7000,
+        reconnectPeriod: 2000
       });
 
       this.mqttClient.on('connect', () => {
@@ -6347,6 +6383,12 @@ class NetworkEngine {
         this.mqttClient.subscribe('unicord/presence/#', { qos: 0 });
 
         this.startPresenceHeartbeat();
+
+        // If user already joined a voice channel before MQTT finished connecting, broadcast now!
+        const activeVoice = window.stateManager?.state?.activeVoiceChannelId;
+        if (activeVoice) {
+          this.broadcastVoiceJoin(activeVoice);
+        }
       });
 
       this.mqttClient.on('message', (topic, payload) => {
@@ -6359,24 +6401,26 @@ class NetworkEngine {
       });
 
       this.mqttClient.on('error', (err) => {
-        console.warn('[UniCord Net] MQTT connection error', err);
+        console.warn('[UniCord Net] MQTT connection error:', err);
       });
     } catch (e) {
-      console.warn('[UniCord Net] Failed to initialize MQTT client', e);
+      console.warn('[UniCord Net] Failed to initialize MQTT client:', e);
     }
   }
 
-  // 2. PEERJS WEBRTC WITH ROBUST STUN SERVERS
+  // -------------------------------------------------------------
+  // 2. PEERJS WEBRTC WITH GOOGLE STUN + OPENRELAY TURN SERVERS
+  // -------------------------------------------------------------
   initPeerJS() {
     if (typeof Peer === 'undefined') {
       console.warn('[UniCord Net] PeerJS library not loaded.');
       return;
     }
 
-    const cleanPeerId = 'unicord-' + this.userId.replace(/[^a-zA-Z0-9_-]/g, '');
+    const cleanPeerId = 'unicord-' + this.userId.replace(/[^a-zA-Z0-9_-]/g, '') + '-' + this.sessionId;
 
     try {
-      // Extensive public STUN servers for NAT traversal between mobile 4G/5G and Wi-Fi
+      // Robust STUN + TURN servers to punch through university Wi-Fi, 4G/5G CGNAT, and Symmetric NAT firewalls
       this.peer = new Peer(cleanPeerId, {
         debug: 1,
         config: {
@@ -6386,100 +6430,115 @@ class NetworkEngine {
             { urls: 'stun:stun2.l.google.com:19302' },
             { urls: 'stun:stun3.l.google.com:19302' },
             { urls: 'stun:stun4.l.google.com:19302' },
-            { urls: 'stun:global.stun.twilio.com:3478' }
+            { urls: 'stun:global.stun.twilio.com:3478' },
+            {
+              urls: [
+                'turn:openrelay.metered.ca:80',
+                'turn:openrelay.metered.ca:443',
+                'turn:openrelay.metered.ca:443?transport=tcp'
+              ],
+              username: 'openrelayproject',
+              credential: 'openrelayproject'
+            }
           ]
         }
       });
 
       this.peer.on('open', (id) => {
         this.peerId = id;
-        console.log('[UniCord Voice WebRTC] Peer online with ID:', id);
+        console.log('[UniCord Voice WebRTC] Peer registered online with ID:', id);
+
+        // If currently in a voice channel, immediately announce with valid peerId!
+        const activeVoice = window.stateManager?.state?.activeVoiceChannelId;
+        if (activeVoice) {
+          this.broadcastVoiceJoin(activeVoice);
+        }
       });
 
-      // Handle incoming voice call from friend
-      this.peer.on('call', (call) => {
-        console.log('[UniCord Voice WebRTC] Incoming voice call from:', call.peer);
-
-        // Function to answer with stream
-        const answerWithStream = (stream) => {
-          call.answer(stream);
+      // Handle incoming voice call from peer/friend
+      this.peer.on('call', async (call) => {
+        console.log('[UniCord Voice WebRTC] Incoming voice call from friend:', call.peer);
+        try {
+          const myStream = await this.getOrCreateMicStream();
+          call.answer(myStream);
           this.setupRemoteAudioStream(call);
-        };
-
-        if (window.audioEngine?.micStream) {
-          answerWithStream(window.audioEngine.micStream);
-        } else {
-          // If mic stream not initialized yet, request it or answer audio-only
-          navigator.mediaDevices.getUserMedia({
-            audio: { echoCancellation: true, noiseSuppression: true },
-            video: false
-          }).then(stream => {
-            window.audioEngine.micStream = stream;
-            answerWithStream(stream);
-          }).catch(err => {
-            console.warn('[UniCord Voice] No mic available, answering to listen only:', err);
-            // Create a silent audio track so WebRTC connection succeeds for listening!
-            const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-            const osc = audioCtx.createOscillator();
-            const dst = osc.connect(audioCtx.createMediaStreamDestination());
-            osc.start();
-            answerWithStream(dst.stream);
-          });
+        } catch (err) {
+          console.warn('[UniCord Voice] Error answering incoming call:', err);
         }
       });
 
       this.peer.on('error', (err) => {
         console.warn('[UniCord Voice WebRTC] Peer error:', err);
+        if (err.type === 'unavailable-id') {
+          // If collision happens, pick a new session ID and reconnect
+          this.sessionId = Math.random().toString(36).substring(2, 7);
+          sessionStorage.setItem('unicord_session_tab_id', this.sessionId);
+          setTimeout(() => this.initPeerJS(), 800);
+        }
       });
     } catch (e) {
-      console.warn('[UniCord Voice WebRTC] Failed to initialize PeerJS', e);
+      console.warn('[UniCord Voice WebRTC] Failed to initialize PeerJS:', e);
     }
   }
 
+  async getOrCreateMicStream() {
+    if (window.audioEngine?.micStream && window.audioEngine.micStream.active) {
+      return window.audioEngine.micStream;
+    }
+
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        audio: {
+          echoCancellation: true,
+          noiseSuppression: true,
+          autoGainControl: true
+        },
+        video: false
+      });
+      if (window.audioEngine) {
+        window.audioEngine.micStream = stream;
+      }
+      return stream;
+    } catch (err) {
+      console.warn('[UniCord Voice] No mic access, creating silent stream for listening:', err);
+      const AudioCtx = window.AudioContext || window.webkitAudioContext;
+      const dummyCtx = new AudioCtx();
+      const osc = dummyCtx.createOscillator();
+      const dst = dummyCtx.createMediaStreamDestination();
+      const gain = dummyCtx.createGain();
+      gain.gain.value = 0;
+      osc.connect(gain);
+      gain.connect(dst);
+      osc.start();
+      return dst.stream;
+    }
+  }
+
+  // -------------------------------------------------------------
+  // 3. AUDIO STREAM ROUTING & WEB AUDIO GRAPH
+  // -------------------------------------------------------------
   setupRemoteAudioStream(call) {
     const peerId = call.peer;
     this.activeVoiceCallPeers.set(peerId, call);
 
     call.on('stream', (remoteStream) => {
-      console.log('[UniCord Voice WebRTC] Received live audio stream from friend:', peerId);
+      console.log('[UniCord Voice WebRTC] Received live audio stream from friend:', peerId, remoteStream);
 
+      // 1. Maintain a hidden HTML5 audio element (keeps Chrome WebRTC audio decode clock alive)
       let audio = this.remoteAudioElements.get(peerId);
       if (!audio) {
         audio = document.createElement('audio');
         audio.autoplay = true;
         audio.playsInline = true;
-        audio.muted = false;
-        audio.volume = 1.0;
+        audio.muted = true; // Muted in HTML tag so Web Audio API provides high-fidelity, un-clipped output
         document.body.appendChild(audio);
         this.remoteAudioElements.set(peerId, audio);
       }
-
       audio.srcObject = remoteStream;
-      audio.muted = false;
-      audio.volume = 1.0;
+      audio.play().catch(() => {});
 
-      // Resume AudioContext if suspended
-      if (window.audioEngine?.ctx && window.audioEngine.ctx.state === 'suspended') {
-        window.audioEngine.ctx.resume();
-      }
-
-      // Ensure browser autoplay unlocks
-      const playPromise = audio.play();
-      if (playPromise !== undefined) {
-        playPromise.catch(() => {
-          console.log('[UniCord Voice] Autoplay waiting for user touch/click...');
-          const unlock = () => {
-            audio.play();
-            document.removeEventListener('click', unlock);
-            document.removeEventListener('touchstart', unlock);
-          };
-          document.addEventListener('click', unlock, { once: true });
-          document.addEventListener('touchstart', unlock, { once: true });
-        });
-      }
-
-      // Analyze remote classmate's audio to light up their green speaking ring!
-      this.attachRemoteSpeakingDetector(peerId, remoteStream);
+      // 2. Connect into Web Audio Graph (source -> analyser -> gain -> speakers!)
+      this.attachRemoteAudioGraph(peerId, remoteStream);
     });
 
     call.on('close', () => {
@@ -6487,23 +6546,49 @@ class NetworkEngine {
     });
 
     call.on('error', (err) => {
-      console.warn('[UniCord Voice WebRTC] Call stream error with peer:', peerId, err);
+      console.warn('[UniCord Voice WebRTC] Call error with peer:', peerId, err);
       this.cleanupPeer(peerId);
     });
   }
 
-  attachRemoteSpeakingDetector(peerId, stream) {
-    if (!window.audioEngine?.ctx) return;
+  attachRemoteAudioGraph(peerId, stream) {
+    if (!window.audioEngine) return;
+    window.audioEngine.initContext();
+    const ctx = window.audioEngine.ctx;
+    if (!ctx) return;
+
+    if (ctx.state === 'suspended') {
+      ctx.resume().catch(() => {});
+    }
+
     try {
-      if (window.audioEngine.ctx.state === 'suspended') {
-        window.audioEngine.ctx.resume();
+      // Cleanup previous graph for this peer if already existing
+      if (this.remoteAudioNodes.has(peerId)) {
+        try {
+          const old = this.remoteAudioNodes.get(peerId);
+          old.source.disconnect();
+          old.analyser.disconnect();
+          old.gain.disconnect();
+        } catch (e) {}
+        this.remoteAudioNodes.delete(peerId);
       }
 
-      const source = window.audioEngine.ctx.createMediaStreamSource(stream);
-      const analyser = window.audioEngine.ctx.createAnalyser();
+      const source = ctx.createMediaStreamSource(stream);
+      const analyser = ctx.createAnalyser();
       analyser.fftSize = 128;
-      source.connect(analyser);
 
+      const gain = ctx.createGain();
+      // Set to 0 if deafened, otherwise full 1.0 volume
+      gain.gain.value = window.stateManager?.state?.isDeafened ? 0 : 1.0;
+
+      // Complete Audio Pipeline: source -> analyser -> gain -> ctx.destination (SPEAKERS!)
+      source.connect(analyser);
+      analyser.connect(gain);
+      gain.connect(ctx.destination);
+
+      this.remoteAudioNodes.set(peerId, { source, analyser, gain });
+
+      // Real-time green ring voice detection for friend's speaking activity
       const checkSpeech = () => {
         if (!this.activeVoiceCallPeers.has(peerId)) return;
         const data = new Uint8Array(analyser.frequencyBinCount);
@@ -6528,8 +6613,26 @@ class NetworkEngine {
       };
       requestAnimationFrame(checkSpeech);
     } catch (e) {
-      console.warn('Error attaching remote speaker analyzer:', e);
+      console.warn('[UniCord Voice WebRTC] Web Audio graph routing failed, falling back to direct audio tag:', e);
+      // Fallback: If Web Audio routing fails, unmute HTML5 audio tag directly
+      const audio = this.remoteAudioElements.get(peerId);
+      if (audio) {
+        audio.muted = false;
+        audio.volume = 1.0;
+        audio.play().catch(() => {});
+      }
     }
+  }
+
+  setRemoteAudioMuted(isMuted) {
+    this.remoteAudioNodes.forEach(nodes => {
+      if (nodes.gain) {
+        nodes.gain.gain.value = isMuted ? 0 : 1.0;
+      }
+    });
+    this.remoteAudioElements.forEach(audio => {
+      if (isMuted) audio.muted = true;
+    });
   }
 
   cleanupPeer(peerId) {
@@ -6541,9 +6644,20 @@ class NetworkEngine {
       audio.remove();
       this.remoteAudioElements.delete(peerId);
     }
+    const nodes = this.remoteAudioNodes.get(peerId);
+    if (nodes) {
+      try {
+        nodes.source.disconnect();
+        nodes.analyser.disconnect();
+        nodes.gain.disconnect();
+      } catch (e) {}
+      this.remoteAudioNodes.delete(peerId);
+    }
   }
 
-  // 3. BROADCASTING OUTGOING ACTIONS
+  // -------------------------------------------------------------
+  // 4. BROADCASTING OUTGOING ACTIONS
+  // -------------------------------------------------------------
   broadcastChatMessage(channelId, message) {
     if (!this.mqttClient || !this.isConnected) return;
     const topic = `unicord/chat/${channelId}`;
@@ -6562,11 +6676,47 @@ class NetworkEngine {
     const payload = JSON.stringify({
       type: 'JOIN',
       userId: this.userId,
+      sessionId: this.sessionId,
       peerId: this.peerId,
       name: me.name,
       avatarText: me.avatarText,
       avatarBg: me.avatarBg,
-      channelId
+      channelId,
+      isMuted: window.stateManager.state.isMuted
+    });
+    this.mqttClient.publish(topic, payload);
+  }
+
+  broadcastVoiceAck(channelId, toUserId) {
+    if (!this.mqttClient || !this.isConnected) return;
+    const me = window.stateManager.state.currentUser;
+    const topic = `unicord/voice/${channelId}`;
+    const payload = JSON.stringify({
+      type: 'VOICE_ACK',
+      userId: this.userId,
+      sessionId: this.sessionId,
+      peerId: this.peerId,
+      targetUserId: toUserId,
+      name: me.name,
+      avatarText: me.avatarText,
+      avatarBg: me.avatarBg,
+      channelId,
+      isMuted: window.stateManager.state.isMuted
+    });
+    this.mqttClient.publish(topic, payload);
+  }
+
+  broadcastMuteState(isMuted) {
+    if (!this.mqttClient || !this.isConnected) return;
+    const activeVoice = window.stateManager?.state?.activeVoiceChannelId;
+    if (!activeVoice) return;
+    const topic = `unicord/voice/${activeVoice}`;
+    const payload = JSON.stringify({
+      type: 'MUTE_STATE',
+      userId: this.userId,
+      peerId: this.peerId,
+      isMuted,
+      channelId: activeVoice
     });
     this.mqttClient.publish(topic, payload);
   }
@@ -6584,14 +6734,24 @@ class NetworkEngine {
 
     // Close all WebRTC voice calls
     this.activeVoiceCallPeers.forEach(call => {
-      try { call.close(); } catch(e){}
+      try { call.close(); } catch (e) {}
     });
     this.activeVoiceCallPeers.clear();
+
     this.remoteAudioElements.forEach(audio => {
       audio.pause();
       audio.remove();
     });
     this.remoteAudioElements.clear();
+
+    this.remoteAudioNodes.forEach(nodes => {
+      try {
+        nodes.source.disconnect();
+        nodes.analyser.disconnect();
+        nodes.gain.disconnect();
+      } catch (e) {}
+    });
+    this.remoteAudioNodes.clear();
   }
 
   startPresenceHeartbeat() {
@@ -6604,11 +6764,13 @@ class NetworkEngine {
       const payload = JSON.stringify({
         type: 'HEARTBEAT',
         userId: this.userId,
+        sessionId: this.sessionId,
         peerId: this.peerId,
         name: me.name,
         avatarText: me.avatarText,
         avatarBg: me.avatarBg,
         activeVoiceChannelId: activeVoice,
+        isMuted: window.stateManager.state.isMuted,
         timestamp: Date.now()
       });
 
@@ -6616,7 +6778,27 @@ class NetworkEngine {
 
       // Clean up stale peers
       this.purgeStalePresence();
-    }, 3000);
+    }, 2500);
+  }
+
+  startCallRetryMonitor() {
+    if (this.callRetryTimer) clearInterval(this.callRetryTimer);
+    this.callRetryTimer = setInterval(() => {
+      const activeVoice = window.stateManager?.state?.activeVoiceChannelId;
+      if (!activeVoice || !this.peer || !this.peerId) return;
+
+      this.remotePresence.forEach((info, uid) => {
+        if (info.channelId === activeVoice && info.peerId && info.peerId !== this.peerId) {
+          if (!this.activeVoiceCallPeers.has(info.peerId)) {
+            // Determine who calls to avoid call collision
+            if (this.peerId < info.peerId) {
+              console.log('[UniCord Voice Retry] Auto-connecting to peer:', info.peerId);
+              this.initiateVoiceCallToPeer(info.peerId);
+            }
+          }
+        }
+      });
+    }, 3500);
   }
 
   purgeStalePresence() {
@@ -6624,12 +6806,12 @@ class NetworkEngine {
     let changed = false;
 
     this.remotePresence.forEach((info, uid) => {
-      if (now - info.lastSeen > 8000) {
+      if (now - info.lastSeen > 9000) {
         this.remotePresence.delete(uid);
         if (info.channelId) {
           const list = window.stateManager.state.voiceParticipants[info.channelId];
           if (list) {
-            window.stateManager.state.voiceParticipants[info.channelId] = list.filter(p => p.id !== uid);
+            window.stateManager.state.voiceParticipants[info.channelId] = list.filter(p => p.id !== uid && p.peerId !== info.peerId);
             changed = true;
           }
         }
@@ -6642,10 +6824,13 @@ class NetworkEngine {
     }
   }
 
-  // 4. HANDLING INCOMING MESSAGES FROM CLASSMATES
+  // -------------------------------------------------------------
+  // 5. HANDLING INCOMING MESSAGES
+  // -------------------------------------------------------------
   handleIncomingMessage(topic, data) {
-    if (data.senderId === this.userId || data.userId === this.userId) {
-      return; // Ignore own messages
+    // Ignore self messages
+    if (data.senderId === this.userId || (data.userId === this.userId && data.sessionId === this.sessionId)) {
+      return;
     }
 
     // Chat Message
@@ -6671,16 +6856,32 @@ class NetworkEngine {
 
   handleVoicePresence(data) {
     const uid = data.userId;
-    if (!uid || uid === this.userId) return;
+    if (!uid || (uid === this.userId && data.sessionId === this.sessionId)) return;
 
     if (data.type === 'LEAVE') {
       this.remotePresence.delete(uid);
       const chId = data.channelId;
       if (chId && window.stateManager.state.voiceParticipants[chId]) {
         window.stateManager.state.voiceParticipants[chId] = 
-          window.stateManager.state.voiceParticipants[chId].filter(p => p.id !== uid);
+          window.stateManager.state.voiceParticipants[chId].filter(p => p.id !== uid && p.peerId !== data.peerId);
         window.uiController?.renderChannels();
         window.uiController?.renderVoiceStage();
+      }
+      if (data.peerId) {
+        this.cleanupPeer(data.peerId);
+      }
+      return;
+    }
+
+    if (data.type === 'MUTE_STATE') {
+      const activeVoice = data.channelId;
+      if (activeVoice && window.stateManager.state.voiceParticipants[activeVoice]) {
+        const p = window.stateManager.state.voiceParticipants[activeVoice].find(x => x.id === uid || x.peerId === data.peerId);
+        if (p) {
+          p.isMuted = data.isMuted;
+          window.uiController?.renderVoiceStage();
+          window.uiController?.renderChannels();
+        }
       }
       return;
     }
@@ -6692,7 +6893,8 @@ class NetworkEngine {
       peerId: data.peerId,
       lastSeen: Date.now(),
       avatarBg: data.avatarBg,
-      avatarText: data.avatarText
+      avatarText: data.avatarText,
+      isMuted: data.isMuted || false
     });
 
     if (activeVoice) {
@@ -6701,27 +6903,38 @@ class NetworkEngine {
       }
 
       const list = window.stateManager.state.voiceParticipants[activeVoice];
-      let p = list.find(x => x.id === uid);
+      let p = list.find(x => x.id === uid || (x.peerId && x.peerId === data.peerId));
       if (!p) {
         p = {
           id: uid,
           peerId: data.peerId,
+          isRealPeer: true,
           name: data.name,
           avatarText: data.avatarText || data.name.substring(0, 2).toUpperCase(),
           avatarBg: data.avatarBg || '#23a55a',
           isSpeaking: false,
-          isMuted: false
+          isMuted: data.isMuted || false
         };
         list.push(p);
         window.uiController?.renderChannels();
         window.uiController?.renderVoiceStage();
       } else {
         p.peerId = data.peerId;
+        p.isRealPeer = true;
+        p.name = data.name;
+        if (typeof data.isMuted === 'boolean') {
+          p.isMuted = data.isMuted;
+        }
+      }
+
+      // If friend just sent JOIN and we are in the channel, send immediate VOICE_ACK back!
+      if (data.type === 'JOIN' && window.stateManager.state.activeVoiceChannelId === activeVoice) {
+        this.broadcastVoiceAck(activeVoice, uid);
       }
 
       // If both of us are in this voice channel, connect via WebRTC!
       if (window.stateManager.state.activeVoiceChannelId === activeVoice && data.peerId && this.peer && this.peerId) {
-        // Prevent collision/glare: only the peer with lexicographically smaller peerId calls
+        // Prevent collision/glare: peer with lexicographically smaller peerId calls
         if (this.peerId < data.peerId) {
           this.initiateVoiceCallToPeer(data.peerId);
         }
@@ -6733,28 +6946,16 @@ class NetworkEngine {
     if (this.activeVoiceCallPeers.has(remotePeerId)) return;
     if (!this.peer || !this.peerId) return;
 
-    let myStream = window.audioEngine?.micStream;
-    if (!myStream) {
-      try {
-        myStream = await navigator.mediaDevices.getUserMedia({
-          audio: { echoCancellation: true, noiseSuppression: true },
-          video: false
-        });
-        window.audioEngine.micStream = myStream;
-      } catch (e) {
-        console.warn('Could not get mic stream for outgoing call', e);
-        return;
-      }
-    }
+    const myStream = await this.getOrCreateMicStream();
+    console.log('[UniCord Voice WebRTC] Calling friend peer:', remotePeerId);
 
-    console.log('[UniCord Voice WebRTC] Calling classmate peer:', remotePeerId);
     try {
       const call = this.peer.call(remotePeerId, myStream);
       if (call) {
         this.setupRemoteAudioStream(call);
       }
     } catch (e) {
-      console.warn('[UniCord Voice WebRTC] Call failed:', e);
+      console.warn('[UniCord Voice WebRTC] Call initiation failed:', e);
     }
   }
 }
@@ -6877,6 +7078,13 @@ class VoiceController {
       window.audioEngine.playUnmuteSound();
     }
 
+    // Actually enable or disable the live microphone track
+    if (window.audioEngine?.micStream) {
+      window.audioEngine.micStream.getAudioTracks().forEach(track => {
+        track.enabled = !isMuted;
+      });
+    }
+
     // Update in voice participants
     const chId = window.stateManager.state.activeVoiceChannelId;
     if (chId && window.stateManager.state.voiceParticipants[chId]) {
@@ -6884,8 +7092,15 @@ class VoiceController {
       if (me) me.isMuted = isMuted;
     }
 
+    // Broadcast mute state to other users in real time
+    if (window.networkEngine) {
+      window.networkEngine.broadcastMuteState(isMuted);
+    }
+
     window.stateManager.saveState();
     window.uiController.updateUserBarControls();
+    window.uiController.renderVoiceStage();
+    window.uiController.renderChannels();
   }
 
   toggleDeafen() {
@@ -6896,10 +7111,22 @@ class VoiceController {
 
     if (isDeafened) {
       window.stateManager.state.isMuted = true;
+      if (window.audioEngine?.micStream) {
+        window.audioEngine.micStream.getAudioTracks().forEach(track => {
+          track.enabled = false;
+        });
+      }
+    }
+
+    // Mute/unmute remote incoming audio
+    if (window.networkEngine) {
+      window.networkEngine.setRemoteAudioMuted(isDeafened);
     }
 
     window.stateManager.saveState();
     window.uiController.updateUserBarControls();
+    window.uiController.renderVoiceStage();
+    window.uiController.renderChannels();
   }
 
   async toggleCamera() {
@@ -7016,8 +7243,13 @@ class VoiceController {
     const participants = window.stateManager.state.voiceParticipants[channelId];
     if (!participants || participants.length <= 1) return;
 
-    // Pick a classmate participant who is not currently muted
-    const classmates = participants.filter(p => p.id !== window.stateManager.state.currentUser.id && !p.isMuted);
+    // Pick only simulated/bot classmates, NEVER take over a real peer's voice!
+    const classmates = participants.filter(p => 
+      p.id !== window.stateManager.state.currentUser.id && 
+      !p.isMuted && 
+      !p.peerId && 
+      !p.isRealPeer
+    );
     if (classmates.length === 0) return;
 
     const speaker = classmates[Math.floor(Math.random() * classmates.length)];

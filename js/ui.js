@@ -595,20 +595,59 @@ class UIController {
 
     const participants = window.stateManager.state.voiceParticipants[chId] || [];
 
-    // Screen Share Tile if active
-    if (window.stateManager.state.isScreenSharing) {
+    // Local Screen Share Tile if active
+    if (window.stateManager.state.isScreenSharing && window.voiceController?.screenStream) {
       const screenTile = document.createElement('div');
       screenTile.className = 'voice-screenshare-tile';
-      screenTile.innerHTML = `
-        <div class="screen-share-preview">
-          <svg class="screen-share-icon" viewBox="0 0 24 24" width="48" height="48"><path fill="currentColor" d="M20 18c1.1 0 1.99-.9 1.99-2L22 6c0-1.11-.9-2-2-2H4c-1.11 0-2 .89-2 2v10c0 1.1.89 2 2 2H0v2h24v-2h-4zM4 6h16v10H4V6z"/></svg>
-          <div class="screen-share-title">${window.stateManager.state.currentUser.name}'s Screen (BBA Presentation Slides)</div>
-        </div>
-      `;
+      
+      const vid = document.createElement('video');
+      vid.style.width = '100%';
+      vid.style.height = '100%';
+      vid.style.objectFit = 'contain';
+      vid.style.backgroundColor = '#000';
+      vid.muted = true;
+      vid.autoplay = true;
+      vid.srcObject = window.voiceController.screenStream;
+
+      const overlay = document.createElement('div');
+      overlay.className = 'screen-share-preview';
+      overlay.style.position = 'absolute';
+      overlay.style.bottom = '10px';
+      overlay.style.left = '10px';
+      overlay.innerHTML = `<div class="screen-share-title" style="background: rgba(0,0,0,0.6); padding: 4px 8px; border-radius: 4px;">You are sharing screen</div>`;
+      
+      screenTile.appendChild(vid);
+      screenTile.appendChild(overlay);
       stage.appendChild(screenTile);
     }
 
     participants.forEach(p => {
+      // Check if remote peer is sharing screen (has video track)
+      if (p.remoteStream && p.remoteStream.getVideoTracks().length > 0) {
+        const remoteScreenTile = document.createElement('div');
+        remoteScreenTile.className = 'voice-screenshare-tile';
+        
+        const vid = document.createElement('video');
+        vid.style.width = '100%';
+        vid.style.height = '100%';
+        vid.style.objectFit = 'contain';
+        vid.style.backgroundColor = '#000';
+        vid.muted = true; // Audio is handled separately
+        vid.autoplay = true;
+        vid.srcObject = p.remoteStream;
+
+        const overlay = document.createElement('div');
+        overlay.className = 'screen-share-preview';
+        overlay.style.position = 'absolute';
+        overlay.style.bottom = '10px';
+        overlay.style.left = '10px';
+        overlay.innerHTML = `<div class="screen-share-title" style="background: rgba(0,0,0,0.6); padding: 4px 8px; border-radius: 4px;">${p.name}'s Screen</div>`;
+        
+        remoteScreenTile.appendChild(vid);
+        remoteScreenTile.appendChild(overlay);
+        stage.appendChild(remoteScreenTile);
+      }
+
       const card = document.createElement('div');
       card.className = `voice-card ${p.isSpeaking ? 'speaking' : ''}`;
       card.style.cursor = 'pointer';

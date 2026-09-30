@@ -216,6 +216,7 @@ class VoiceController {
       }
       window.stateManager.state.isScreenSharing = true;
       window.stateManager.saveState();
+      if (window.networkEngine) window.networkEngine.reconnectWebRTC();
     }
     window.uiController.renderVoiceStage();
     window.uiController.updateVoiceConnectionUI(true);
@@ -228,6 +229,7 @@ class VoiceController {
     }
     window.stateManager.state.isScreenSharing = false;
     window.stateManager.saveState();
+    if (window.networkEngine) window.networkEngine.reconnectWebRTC();
     window.uiController.renderVoiceStage();
     window.uiController.updateVoiceConnectionUI(true);
   }

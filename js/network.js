@@ -204,36 +204,64 @@ class NetworkEngine {
   }
 
   async getOrCreateMicStream() {
+    let baseStream;
     if (window.audioEngine?.micStream && window.audioEngine.micStream.active) {
-      return window.audioEngine.micStream;
-    }
-
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({
-        audio: {
-          echoCancellation: true,
-          noiseSuppression: true,
-          autoGainControl: true
-        },
-        video: false
-      });
-      if (window.audioEngine) {
-        window.audioEngine.micStream = stream;
+      baseStream = window.audioEngine.micStream;
+    } else {
+      try {
+        baseStream = await navigator.mediaDevices.getUserMedia({
+          audio: {
+            echoCancellation: true,
+            noiseSuppression: true,
+            autoGainControl: true
+          },
+          video: false
+        });
+        if (window.audioEngine) {
+          window.audioEngine.micStream = baseStream;
+        }
+      } catch (err) {
+        console.warn('[UniCord Voice] No mic access, creating silent stream for listening:', err);
+        const AudioCtx = window.AudioContext || window.webkitAudioContext;
+        const dummyCtx = new AudioCtx();
+        const osc = dummyCtx.createOscillator();
+        const dst = dummyCtx.createMediaStreamDestination();
+        const gain = dummyCtx.createGain();
+        gain.gain.value = 0;
+        osc.connect(gain);
+        gain.connect(dst);
+        osc.start();
+        baseStream = dst.stream;
       }
-      return stream;
-    } catch (err) {
-      console.warn('[UniCord Voice] No mic access, creating silent stream for listening:', err);
-      const AudioCtx = window.AudioContext || window.webkitAudioContext;
-      const dummyCtx = new AudioCtx();
-      const osc = dummyCtx.createOscillator();
-      const dst = dummyCtx.createMediaStreamDestination();
-      const gain = dummyCtx.createGain();
-      gain.gain.value = 0;
-      osc.connect(gain);
-      gain.connect(dst);
-      osc.start();
-      return dst.stream;
     }
+    
+    // Combine audio and video (screenshare) tracks for WebRTC
+    const combined = new MediaStream();
+    baseStream.getAudioTracks().forEach(t => combined.addTrack(t));
+    
+    if (window.stateManager?.state?.isScreenSharing && window.voiceController?.screenStream) {
+      window.voiceController.screenStream.getVideoTracks().forEach(t => combined.addTrack(t));
+    }
+    return combined;
+  }
+
+  async reconnectWebRTC() {
+    console.log('[UniCord Voice WebRTC] Reconnecting WebRTC to push new stream...');
+    const activePeers = Array.from(this.activeVoiceCallPeers.keys());
+    
+    // Close existing calls
+    activePeers.forEach(peerId => {
+      const call = this.activeVoiceCallPeers.get(peerId);
+      if (call) call.close();
+      this.cleanupPeer(peerId);
+    });
+
+    // Wait a brief moment then redial all peers in the channel
+    setTimeout(() => {
+      activePeers.forEach(peerId => {
+        this.initiateVoiceCallToPeer(peerId);
+      });
+    }, 500);
   }
 
   // -------------------------------------------------------------
@@ -245,6 +273,15 @@ class NetworkEngine {
 
     call.on('stream', (remoteStream) => {
       console.log('[UniCord Voice WebRTC] Received live audio stream from friend:', peerId, remoteStream);
+      
+      const chId = window.stateManager?.state?.activeVoiceChannelId;
+      if (chId) {
+        const p = window.stateManager.state.voiceParticipants[chId]?.find(x => x.peerId === peerId || x.id === peerId);
+        if (p) {
+          p.remoteStream = remoteStream;
+          window.uiController?.renderVoiceStage();
+        }
+      }
 
       // 1. Maintain a hidden HTML5 audio element (keeps Chrome WebRTC audio decode clock alive)
       let audio = this.remoteAudioElements.get(peerId);

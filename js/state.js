@@ -3,7 +3,7 @@
  * Handles persistent state, guilds, channels, real-time messaging, and audio presence.
  */
 
-var STORAGE_KEY = 'discord_app_state_v5';
+var STORAGE_KEY = 'unicord_app_state_v1';
 
 var DEFAULT_STATE = {
   currentUser: {
@@ -30,7 +30,7 @@ var DEFAULT_STATE = {
   guilds: [
     {
       id: 'guild-discord',
-      name: 'Discord Central',
+      name: 'Unicord Central',
       initials: 'DC',
       color: '#5865F2',
       icon: null,
@@ -51,7 +51,7 @@ var DEFAULT_STATE = {
             { id: 'chan-general-chat', name: 'general-chat', type: 'text', topic: 'General discussion for all server members.' },
             { id: 'chan-gaming', name: 'gaming', type: 'text', topic: 'Clips, highlights, setup showcases, and game talk.' },
             { id: 'chan-memes', name: 'memes', type: 'text', topic: 'Spicy memes, funny videos, and wholesome content.' },
-            { id: 'chan-bot-commands', name: 'bot-commands', type: 'text', topic: 'Test Discord Bot commands like /help, /poll, /roll, /ping.' }
+            { id: 'chan-bot-commands', name: 'bot-commands', type: 'text', topic: 'Test Unicord Bot commands like /help, /poll, /roll, /ping.' }
           ]
         },
         {
@@ -151,10 +151,10 @@ var DEFAULT_STATE = {
     'chan-general-chat': [
       {
         id: 'msg-welcome-bot',
-        author: { name: 'Discord Bot', avatarText: 'DB', avatarBg: '#5865F2', isBot: true, role: 'BOT' },
+        author: { name: 'Unicord Bot', avatarText: 'DB', avatarBg: '#5865F2', isBot: true, role: 'BOT' },
         timestamp: 'Today at 10:00 AM',
         content: `<div class="discord-embed">
-          <div class="embed-title">👋 Welcome to Discord Central!</div>
+          <div class="embed-title">👋 Welcome to Unicord Central!</div>
           <div class="embed-desc">This is your exact Discord experience with real-time text chat, voice channels, interactive bots, and audio effects!\n\nType **/help** or click one of the channels on the left to get started.</div>
           <div class="embed-footer">Discord System • Verified Community</div>
         </div>`,
@@ -194,7 +194,7 @@ var DEFAULT_STATE = {
     'chan-welcome': [
       {
         id: 'msg-rules',
-        author: { name: 'Discord Bot', avatarText: 'DB', avatarBg: '#5865F2', isBot: true, role: 'BOT' },
+        author: { name: 'Unicord Bot', avatarText: 'DB', avatarBg: '#5865F2', isBot: true, role: 'BOT' },
         timestamp: 'Yesterday at 8:00 PM',
         content: `<div class="discord-embed" style="border-left-color: #23a55a;">
           <div class="embed-title">📜 Server Rules & Guidelines</div>
@@ -209,7 +209,7 @@ var DEFAULT_STATE = {
     'chan-bot-commands': [
       {
         id: 'msg-bot-intro',
-        author: { name: 'Discord Bot', avatarText: 'DB', avatarBg: '#5865F2', isBot: true, role: 'BOT' },
+        author: { name: 'Unicord Bot', avatarText: 'DB', avatarBg: '#5865F2', isBot: true, role: 'BOT' },
         timestamp: 'Today at 9:30 AM',
         content: '🤖 Type \`/help\` to inspect all available slash commands or try \`/roll\`, \`/flip\`, \`/poll [Question]\`, and \`/ping\`!'
       }
@@ -223,7 +223,7 @@ var DEFAULT_STATE = {
       name: 'Sarah',
       discriminator: '1092',
       status: 'online',
-      customStatus: 'Moderating Discord Central 🛡️',
+      customStatus: 'Moderating Unicord Central 🛡️',
       role: 'Moderator',
       avatarText: 'SA',
       avatarBg: '#23a55a',
@@ -259,14 +259,14 @@ var DEFAULT_STATE = {
     },
     {
       id: 'friend-bot',
-      name: 'Discord Bot',
+      name: 'Unicord Bot',
       discriminator: '0001',
       status: 'online',
       customStatus: 'Type /help for commands 🤖',
       role: 'Verified Bot',
       avatarText: 'DB',
       avatarBg: '#5865F2',
-      activity: 'Serving Discord Central',
+      activity: 'Serving Unicord Central',
       activityDetail: 'v2.5 High-Speed',
       bio: 'Official interactive server assistant bot. Supports slash commands, polls, dice rolls, and games.'
     }

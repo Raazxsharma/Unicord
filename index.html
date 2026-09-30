@@ -195,7 +195,8 @@ input, textarea {
 .app-layout {
   display: flex;
   width: 100vw;
-  height: 100vh;
+  height: 100vh; /* Fallback for older browsers */
+  height: 100dvh;
   overflow: hidden;
   position: relative;
 }
@@ -916,6 +917,7 @@ input, textarea {
 .user-controls {
   display: flex;
   align-items: center;
+  flex-shrink: 0;
 }
 
 .ctrl-btn {
@@ -925,6 +927,7 @@ input, textarea {
   display: flex;
   align-items: center;
   justify-content: center;
+  flex-shrink: 0;
   color: var(--text-interactive);
   transition: background-color var(--transition-fast), color var(--transition-fast);
 }
@@ -5853,7 +5856,7 @@ window.MarkdownParser = MarkdownParser;
  * Handles persistent state, guilds, channels, real-time messaging, and audio presence.
  */
 
-var STORAGE_KEY = 'discord_app_state_v5';
+var STORAGE_KEY = 'unicord_app_state_v1';
 
 var DEFAULT_STATE = {
   currentUser: {
@@ -5880,7 +5883,7 @@ var DEFAULT_STATE = {
   guilds: [
     {
       id: 'guild-discord',
-      name: 'Discord Central',
+      name: 'Unicord Central',
       initials: 'DC',
       color: '#5865F2',
       icon: null,
@@ -5901,7 +5904,7 @@ var DEFAULT_STATE = {
             { id: 'chan-general-chat', name: 'general-chat', type: 'text', topic: 'General discussion for all server members.' },
             { id: 'chan-gaming', name: 'gaming', type: 'text', topic: 'Clips, highlights, setup showcases, and game talk.' },
             { id: 'chan-memes', name: 'memes', type: 'text', topic: 'Spicy memes, funny videos, and wholesome content.' },
-            { id: 'chan-bot-commands', name: 'bot-commands', type: 'text', topic: 'Test Discord Bot commands like /help, /poll, /roll, /ping.' }
+            { id: 'chan-bot-commands', name: 'bot-commands', type: 'text', topic: 'Test Unicord Bot commands like /help, /poll, /roll, /ping.' }
           ]
         },
         {
@@ -6001,10 +6004,10 @@ var DEFAULT_STATE = {
     'chan-general-chat': [
       {
         id: 'msg-welcome-bot',
-        author: { name: 'Discord Bot', avatarText: 'DB', avatarBg: '#5865F2', isBot: true, role: 'BOT' },
+        author: { name: 'Unicord Bot', avatarText: 'DB', avatarBg: '#5865F2', isBot: true, role: 'BOT' },
         timestamp: 'Today at 10:00 AM',
         content: `<div class="discord-embed">
-          <div class="embed-title">👋 Welcome to Discord Central!</div>
+          <div class="embed-title">👋 Welcome to Unicord Central!</div>
           <div class="embed-desc">This is your exact Discord experience with real-time text chat, voice channels, interactive bots, and audio effects!\n\nType **/help** or click one of the channels on the left to get started.</div>
           <div class="embed-footer">Discord System • Verified Community</div>
         </div>`,
@@ -6044,7 +6047,7 @@ var DEFAULT_STATE = {
     'chan-welcome': [
       {
         id: 'msg-rules',
-        author: { name: 'Discord Bot', avatarText: 'DB', avatarBg: '#5865F2', isBot: true, role: 'BOT' },
+        author: { name: 'Unicord Bot', avatarText: 'DB', avatarBg: '#5865F2', isBot: true, role: 'BOT' },
         timestamp: 'Yesterday at 8:00 PM',
         content: `<div class="discord-embed" style="border-left-color: #23a55a;">
           <div class="embed-title">📜 Server Rules & Guidelines</div>
@@ -6059,7 +6062,7 @@ var DEFAULT_STATE = {
     'chan-bot-commands': [
       {
         id: 'msg-bot-intro',
-        author: { name: 'Discord Bot', avatarText: 'DB', avatarBg: '#5865F2', isBot: true, role: 'BOT' },
+        author: { name: 'Unicord Bot', avatarText: 'DB', avatarBg: '#5865F2', isBot: true, role: 'BOT' },
         timestamp: 'Today at 9:30 AM',
         content: '🤖 Type \`/help\` to inspect all available slash commands or try \`/roll\`, \`/flip\`, \`/poll [Question]\`, and \`/ping\`!'
       }
@@ -6073,7 +6076,7 @@ var DEFAULT_STATE = {
       name: 'Sarah',
       discriminator: '1092',
       status: 'online',
-      customStatus: 'Moderating Discord Central 🛡️',
+      customStatus: 'Moderating Unicord Central 🛡️',
       role: 'Moderator',
       avatarText: 'SA',
       avatarBg: '#23a55a',
@@ -6109,14 +6112,14 @@ var DEFAULT_STATE = {
     },
     {
       id: 'friend-bot',
-      name: 'Discord Bot',
+      name: 'Unicord Bot',
       discriminator: '0001',
       status: 'online',
       customStatus: 'Type /help for commands 🤖',
       role: 'Verified Bot',
       avatarText: 'DB',
       avatarBg: '#5865F2',
-      activity: 'Serving Discord Central',
+      activity: 'Serving Unicord Central',
       activityDetail: 'v2.5 High-Speed',
       bio: 'Official interactive server assistant bot. Supports slash commands, polls, dice rolls, and games.'
     }
@@ -6482,36 +6485,64 @@ class NetworkEngine {
   }
 
   async getOrCreateMicStream() {
+    let baseStream;
     if (window.audioEngine?.micStream && window.audioEngine.micStream.active) {
-      return window.audioEngine.micStream;
-    }
-
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({
-        audio: {
-          echoCancellation: true,
-          noiseSuppression: true,
-          autoGainControl: true
-        },
-        video: false
-      });
-      if (window.audioEngine) {
-        window.audioEngine.micStream = stream;
+      baseStream = window.audioEngine.micStream;
+    } else {
+      try {
+        baseStream = await navigator.mediaDevices.getUserMedia({
+          audio: {
+            echoCancellation: true,
+            noiseSuppression: true,
+            autoGainControl: true
+          },
+          video: false
+        });
+        if (window.audioEngine) {
+          window.audioEngine.micStream = baseStream;
+        }
+      } catch (err) {
+        console.warn('[UniCord Voice] No mic access, creating silent stream for listening:', err);
+        const AudioCtx = window.AudioContext || window.webkitAudioContext;
+        const dummyCtx = new AudioCtx();
+        const osc = dummyCtx.createOscillator();
+        const dst = dummyCtx.createMediaStreamDestination();
+        const gain = dummyCtx.createGain();
+        gain.gain.value = 0;
+        osc.connect(gain);
+        gain.connect(dst);
+        osc.start();
+        baseStream = dst.stream;
       }
-      return stream;
-    } catch (err) {
-      console.warn('[UniCord Voice] No mic access, creating silent stream for listening:', err);
-      const AudioCtx = window.AudioContext || window.webkitAudioContext;
-      const dummyCtx = new AudioCtx();
-      const osc = dummyCtx.createOscillator();
-      const dst = dummyCtx.createMediaStreamDestination();
-      const gain = dummyCtx.createGain();
-      gain.gain.value = 0;
-      osc.connect(gain);
-      gain.connect(dst);
-      osc.start();
-      return dst.stream;
     }
+    
+    // Combine audio and video (screenshare) tracks for WebRTC
+    const combined = new MediaStream();
+    baseStream.getAudioTracks().forEach(t => combined.addTrack(t));
+    
+    if (window.stateManager?.state?.isScreenSharing && window.voiceController?.screenStream) {
+      window.voiceController.screenStream.getVideoTracks().forEach(t => combined.addTrack(t));
+    }
+    return combined;
+  }
+
+  async reconnectWebRTC() {
+    console.log('[UniCord Voice WebRTC] Reconnecting WebRTC to push new stream...');
+    const activePeers = Array.from(this.activeVoiceCallPeers.keys());
+    
+    // Close existing calls
+    activePeers.forEach(peerId => {
+      const call = this.activeVoiceCallPeers.get(peerId);
+      if (call) call.close();
+      this.cleanupPeer(peerId);
+    });
+
+    // Wait a brief moment then redial all peers in the channel
+    setTimeout(() => {
+      activePeers.forEach(peerId => {
+        this.initiateVoiceCallToPeer(peerId);
+      });
+    }, 500);
   }
 
   // -------------------------------------------------------------
@@ -6523,6 +6554,15 @@ class NetworkEngine {
 
     call.on('stream', (remoteStream) => {
       console.log('[UniCord Voice WebRTC] Received live audio stream from friend:', peerId, remoteStream);
+      
+      const chId = window.stateManager?.state?.activeVoiceChannelId;
+      if (chId) {
+        const p = window.stateManager.state.voiceParticipants[chId]?.find(x => x.peerId === peerId || x.id === peerId);
+        if (p) {
+          p.remoteStream = remoteStream;
+          window.uiController?.renderVoiceStage();
+        }
+      }
 
       // 1. Maintain a hidden HTML5 audio element (keeps Chrome WebRTC audio decode clock alive)
       let audio = this.remoteAudioElements.get(peerId);
@@ -6530,14 +6570,15 @@ class NetworkEngine {
         audio = document.createElement('audio');
         audio.autoplay = true;
         audio.playsInline = true;
-        audio.muted = true; // Muted in HTML tag so Web Audio API provides high-fidelity, un-clipped output
+        // Play directly from HTML5 audio to bypass Chrome Web Audio API silent WebRTC bug
+        audio.muted = window.stateManager?.state?.isDeafened || false;
         document.body.appendChild(audio);
         this.remoteAudioElements.set(peerId, audio);
       }
       audio.srcObject = remoteStream;
       audio.play().catch(() => {});
 
-      // 2. Connect into Web Audio Graph (source -> analyser -> gain -> speakers!)
+      // 2. Connect into Web Audio Graph (only for analyser green ring)
       this.attachRemoteAudioGraph(peerId, remoteStream);
     });
 
@@ -6568,7 +6609,6 @@ class NetworkEngine {
           const old = this.remoteAudioNodes.get(peerId);
           old.source.disconnect();
           old.analyser.disconnect();
-          old.gain.disconnect();
         } catch (e) {}
         this.remoteAudioNodes.delete(peerId);
       }
@@ -6577,16 +6617,10 @@ class NetworkEngine {
       const analyser = ctx.createAnalyser();
       analyser.fftSize = 128;
 
-      const gain = ctx.createGain();
-      // Set to 0 if deafened, otherwise full 1.0 volume
-      gain.gain.value = window.stateManager?.state?.isDeafened ? 0 : 1.0;
-
-      // Complete Audio Pipeline: source -> analyser -> gain -> ctx.destination (SPEAKERS!)
+      // Only connect source -> analyser for green ring. HTML5 <audio> handles playback.
       source.connect(analyser);
-      analyser.connect(gain);
-      gain.connect(ctx.destination);
 
-      this.remoteAudioNodes.set(peerId, { source, analyser, gain });
+      this.remoteAudioNodes.set(peerId, { source, analyser });
 
       // Real-time green ring voice detection for friend's speaking activity
       const checkSpeech = () => {
@@ -6625,13 +6659,8 @@ class NetworkEngine {
   }
 
   setRemoteAudioMuted(isMuted) {
-    this.remoteAudioNodes.forEach(nodes => {
-      if (nodes.gain) {
-        nodes.gain.gain.value = isMuted ? 0 : 1.0;
-      }
-    });
     this.remoteAudioElements.forEach(audio => {
-      if (isMuted) audio.muted = true;
+      audio.muted = isMuted;
     });
   }
 
@@ -7264,6 +7293,7 @@ class VoiceController {
       }
       window.stateManager.state.isScreenSharing = true;
       window.stateManager.saveState();
+      if (window.networkEngine) window.networkEngine.reconnectWebRTC();
     }
     window.uiController.renderVoiceStage();
     window.uiController.updateVoiceConnectionUI(true);
@@ -7276,6 +7306,7 @@ class VoiceController {
     }
     window.stateManager.state.isScreenSharing = false;
     window.stateManager.saveState();
+    if (window.networkEngine) window.networkEngine.reconnectWebRTC();
     window.uiController.renderVoiceStage();
     window.uiController.updateVoiceConnectionUI(true);
   }
@@ -9033,20 +9064,59 @@ class UIController {
 
     const participants = window.stateManager.state.voiceParticipants[chId] || [];
 
-    // Screen Share Tile if active
-    if (window.stateManager.state.isScreenSharing) {
+    // Local Screen Share Tile if active
+    if (window.stateManager.state.isScreenSharing && window.voiceController?.screenStream) {
       const screenTile = document.createElement('div');
       screenTile.className = 'voice-screenshare-tile';
-      screenTile.innerHTML = `
-        <div class="screen-share-preview">
-          <svg class="screen-share-icon" viewBox="0 0 24 24" width="48" height="48"><path fill="currentColor" d="M20 18c1.1 0 1.99-.9 1.99-2L22 6c0-1.11-.9-2-2-2H4c-1.11 0-2 .89-2 2v10c0 1.1.89 2 2 2H0v2h24v-2h-4zM4 6h16v10H4V6z"/></svg>
-          <div class="screen-share-title">${window.stateManager.state.currentUser.name}'s Screen (BBA Presentation Slides)</div>
-        </div>
-      `;
+      
+      const vid = document.createElement('video');
+      vid.style.width = '100%';
+      vid.style.height = '100%';
+      vid.style.objectFit = 'contain';
+      vid.style.backgroundColor = '#000';
+      vid.muted = true;
+      vid.autoplay = true;
+      vid.srcObject = window.voiceController.screenStream;
+
+      const overlay = document.createElement('div');
+      overlay.className = 'screen-share-preview';
+      overlay.style.position = 'absolute';
+      overlay.style.bottom = '10px';
+      overlay.style.left = '10px';
+      overlay.innerHTML = `<div class="screen-share-title" style="background: rgba(0,0,0,0.6); padding: 4px 8px; border-radius: 4px;">You are sharing screen</div>`;
+      
+      screenTile.appendChild(vid);
+      screenTile.appendChild(overlay);
       stage.appendChild(screenTile);
     }
 
     participants.forEach(p => {
+      // Check if remote peer is sharing screen (has video track)
+      if (p.remoteStream && p.remoteStream.getVideoTracks().length > 0) {
+        const remoteScreenTile = document.createElement('div');
+        remoteScreenTile.className = 'voice-screenshare-tile';
+        
+        const vid = document.createElement('video');
+        vid.style.width = '100%';
+        vid.style.height = '100%';
+        vid.style.objectFit = 'contain';
+        vid.style.backgroundColor = '#000';
+        vid.muted = true; // Audio is handled separately
+        vid.autoplay = true;
+        vid.srcObject = p.remoteStream;
+
+        const overlay = document.createElement('div');
+        overlay.className = 'screen-share-preview';
+        overlay.style.position = 'absolute';
+        overlay.style.bottom = '10px';
+        overlay.style.left = '10px';
+        overlay.innerHTML = `<div class="screen-share-title" style="background: rgba(0,0,0,0.6); padding: 4px 8px; border-radius: 4px;">${p.name}'s Screen</div>`;
+        
+        remoteScreenTile.appendChild(vid);
+        remoteScreenTile.appendChild(overlay);
+        stage.appendChild(remoteScreenTile);
+      }
+
       const card = document.createElement('div');
       card.className = `voice-card ${p.isSpeaking ? 'speaking' : ''}`;
       card.style.cursor = 'pointer';

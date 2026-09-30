@@ -252,14 +252,15 @@ class NetworkEngine {
         audio = document.createElement('audio');
         audio.autoplay = true;
         audio.playsInline = true;
-        audio.muted = true; // Muted in HTML tag so Web Audio API provides high-fidelity, un-clipped output
+        // Play directly from HTML5 audio to bypass Chrome Web Audio API silent WebRTC bug
+        audio.muted = window.stateManager?.state?.isDeafened || false;
         document.body.appendChild(audio);
         this.remoteAudioElements.set(peerId, audio);
       }
       audio.srcObject = remoteStream;
       audio.play().catch(() => {});
 
-      // 2. Connect into Web Audio Graph (source -> analyser -> gain -> speakers!)
+      // 2. Connect into Web Audio Graph (only for analyser green ring)
       this.attachRemoteAudioGraph(peerId, remoteStream);
     });
 
@@ -290,7 +291,6 @@ class NetworkEngine {
           const old = this.remoteAudioNodes.get(peerId);
           old.source.disconnect();
           old.analyser.disconnect();
-          old.gain.disconnect();
         } catch (e) {}
         this.remoteAudioNodes.delete(peerId);
       }
@@ -299,16 +299,10 @@ class NetworkEngine {
       const analyser = ctx.createAnalyser();
       analyser.fftSize = 128;
 
-      const gain = ctx.createGain();
-      // Set to 0 if deafened, otherwise full 1.0 volume
-      gain.gain.value = window.stateManager?.state?.isDeafened ? 0 : 1.0;
-
-      // Complete Audio Pipeline: source -> analyser -> gain -> ctx.destination (SPEAKERS!)
+      // Only connect source -> analyser for green ring. HTML5 <audio> handles playback.
       source.connect(analyser);
-      analyser.connect(gain);
-      gain.connect(ctx.destination);
 
-      this.remoteAudioNodes.set(peerId, { source, analyser, gain });
+      this.remoteAudioNodes.set(peerId, { source, analyser });
 
       // Real-time green ring voice detection for friend's speaking activity
       const checkSpeech = () => {
@@ -347,13 +341,8 @@ class NetworkEngine {
   }
 
   setRemoteAudioMuted(isMuted) {
-    this.remoteAudioNodes.forEach(nodes => {
-      if (nodes.gain) {
-        nodes.gain.gain.value = isMuted ? 0 : 1.0;
-      }
-    });
     this.remoteAudioElements.forEach(audio => {
-      if (isMuted) audio.muted = true;
+      audio.muted = isMuted;
     });
   }
 

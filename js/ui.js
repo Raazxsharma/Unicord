@@ -322,13 +322,26 @@ class UIController {
             participants.forEach(p => {
               const vRow = document.createElement('div');
               vRow.className = `voice-member-item ${p.isSpeaking ? 'speaking' : ''}`;
+              vRow.style.cursor = 'pointer';
+              vRow.setAttribute('title', 'Click to view profile');
+
+              const hasPhoto = !!p.avatarPhoto;
+              const avatarStyle = hasPhoto
+                ? `background-image: url('${p.avatarPhoto}'); background-size: cover; background-position: center; border: none;`
+                : `background-color: ${p.avatarBg || '#5865F2'};`;
+              const avatarContent = hasPhoto ? '' : (p.avatarText || p.name.charAt(0));
+
               vRow.innerHTML = `
-                <div class="voice-member-avatar ${p.isSpeaking ? 'speaking' : ''}" style="background-color: ${p.avatarBg || '#5865F2'}">
-                  ${p.avatarText || p.name.charAt(0)}
+                <div class="voice-member-avatar ${p.isSpeaking ? 'speaking' : ''}" style="${avatarStyle}">
+                  ${avatarContent}
                 </div>
                 <span class="voice-member-name">${p.name}</span>
                 ${p.isMuted ? '<span style="font-size:10px; color:var(--red);">MUTED</span>' : ''}
               `;
+              vRow.onclick = (e) => {
+                e.stopPropagation();
+                this.openMemberProfilePopover(p, e);
+              };
               voiceMembersList.appendChild(vRow);
             });
             group.appendChild(voiceMembersList);
@@ -418,15 +431,21 @@ class UIController {
 
       const parsedHtml = window.MarkdownParser.parse(msg.content);
 
+      const hasPhoto = !!msg.author.avatarPhoto;
+      const avatarStyle = hasPhoto
+        ? `background-image: url('${msg.author.avatarPhoto}'); background-size: cover; background-position: center; border: none;`
+        : `background-color: ${msg.author.avatarBg || '#5865F2'};`;
+      const avatarContent = hasPhoto ? '' : (msg.author.avatarText || msg.author.name.charAt(0));
+
       item.innerHTML = `
-        <div class="message-avatar-wrap">
-          <div class="message-avatar" style="background-color: ${msg.author.avatarBg || '#5865F2'}">
-            ${msg.author.avatarText || msg.author.name.charAt(0)}
+        <div class="message-avatar-wrap" style="cursor: pointer;" title="View Profile">
+          <div class="message-avatar" style="${avatarStyle}">
+            ${avatarContent}
           </div>
         </div>
         <div class="message-content-wrap">
           <div class="message-header">
-            <span class="message-username">${msg.author.name}</span>
+            <span class="message-username" style="cursor: pointer;" title="View Profile">${msg.author.name}</span>
             ${msg.author.isBot ? '<span class="message-tag-badge">BOT</span>' : ''}
             ${msg.author.role ? `<span style="font-size:10px; background: rgba(255,255,255,0.08); padding: 1px 4px; border-radius: 3px; color: var(--text-muted);">${msg.author.role}</span>` : ''}
             <span class="message-timestamp">${msg.timestamp}</span>
@@ -457,6 +476,12 @@ class UIController {
         </div>
       `;
 
+      // Click avatar or username to view full profile popover
+      const avWrap = item.querySelector('.message-avatar-wrap');
+      const uName = item.querySelector('.message-username');
+      if (avWrap) avWrap.onclick = (e) => { e.stopPropagation(); this.openMemberProfilePopover(msg.author, e); };
+      if (uName) uName.onclick = (e) => { e.stopPropagation(); this.openMemberProfilePopover(msg.author, e); };
+
       stream.appendChild(item);
     });
 
@@ -471,20 +496,50 @@ class UIController {
     if (!scrollable) return;
     scrollable.innerHTML = '';
 
+    const me = window.stateManager.state.currentUser;
+    const onlineClassmates = [
+      {
+        id: me.id,
+        name: me.name + ' (You)',
+        role: me.role || 'Server Owner',
+        status: me.status || 'online',
+        avatarText: me.avatarText,
+        avatarBg: me.avatarBg,
+        avatarPhoto: me.avatarPhoto || null,
+        activity: me.customStatus || 'Online on UniCord',
+        customStatus: me.customStatus,
+        bio: me.bio || 'UniCord Campus Student',
+        bannerColor: me.bannerColor || '#5865F2'
+      }
+    ];
+
+    if (window.networkEngine?.remotePresence) {
+      window.networkEngine.remotePresence.forEach((info, uid) => {
+        onlineClassmates.push({
+          id: uid,
+          name: info.name,
+          role: info.role || 'Student',
+          status: 'online',
+          avatarText: info.avatarText || info.name.substring(0, 2).toUpperCase(),
+          avatarBg: info.avatarBg || '#23a55a',
+          avatarPhoto: info.avatarPhoto || null,
+          activity: info.customStatus || 'Online on UniCord',
+          customStatus: info.customStatus,
+          bio: info.bio || 'Proud campus classmate!',
+          bannerColor: info.bannerColor || info.avatarBg || '#5865F2'
+        });
+      });
+    }
+
     const groups = [
+      { title: `ONLINE CLASSMATES — ${onlineClassmates.length}`, members: onlineClassmates },
       { title: 'CAMPUS BOT — 1', members: [
-        { name: 'UniBot', role: 'Official Bot', status: 'online', avatarText: 'UB', avatarBg: '#5865F2', activity: 'Helping students 🤖', bio: 'Official Campus Assistant' }
+        { name: 'UniBot', role: 'Official Bot', status: 'online', avatarText: 'UB', avatarBg: '#5865F2', activity: 'Helping students 🤖', bio: 'Official Campus Assistant', bannerColor: '#5865F2' }
       ]},
-      { title: 'CLASS LEADERSHIP — 1', members: [
-        { name: 'Tanmay (CR)', role: 'Class Representative', status: 'dnd', avatarText: 'TC', avatarBg: '#eb459e', activity: 'In Faculty Meeting 📝', bio: 'BBA 2026 Class Rep' }
-      ]},
-      { title: 'HOSTELLERS — 2', members: [
-        { name: 'Rohan (Hostel Block B)', role: 'Hosteller', status: 'online', avatarText: 'RH', avatarBg: '#f0b232', activity: 'Listening to Spotify', bio: 'Block B Room 204' },
-        { name: 'Kabir (Hostel Block A)', role: 'Hosteller', status: 'online', avatarText: 'KB', avatarBg: '#f23f43', activity: 'Prepping for tests', bio: 'Block A Room 102' }
-      ]},
-      { title: 'DAY SCHOLARS — 2', members: [
-        { name: 'Priya (Day Scholar)', role: 'Day Scholar', status: 'idle', avatarText: 'PR', avatarBg: '#23a55a', activity: 'Commuting 🚇', bio: 'South Campus Day Scholar' },
-        { name: 'Ananya (Design Dept)', role: 'Day Scholar', status: 'online', avatarText: 'AN', avatarBg: '#5865F2', activity: 'Sketching posters', bio: 'Design & Media Society' }
+      { title: 'CAMPUS LIFE LEADERS — 3', members: [
+        { name: 'Tanmay (CR)', role: 'Class Representative', status: 'dnd', avatarText: 'TC', avatarBg: '#eb459e', activity: 'In Faculty Meeting 📝', bio: 'BBA 2026 Class Rep', bannerColor: '#eb459e' },
+        { name: 'Rohan (Hostel Block B)', role: 'Hosteller', status: 'online', avatarText: 'RH', avatarBg: '#f0b232', activity: 'Listening to Spotify', bio: 'Block B Room 204', bannerColor: '#f0b232' },
+        { name: 'Priya (Day Scholar)', role: 'Day Scholar', status: 'idle', avatarText: 'PR', avatarBg: '#23a55a', activity: 'Commuting 🚇', bio: 'South Campus Day Scholar', bannerColor: '#23a55a' }
       ]}
     ];
 
@@ -497,16 +552,23 @@ class UIController {
       g.members.forEach(m => {
         const row = document.createElement('div');
         row.className = 'member-card-row';
+
+        const hasPhoto = !!m.avatarPhoto;
+        const avatarStyle = hasPhoto
+          ? `background-image: url('${m.avatarPhoto}'); background-size: cover; background-position: center; border: none;`
+          : `background-color: ${m.avatarBg};`;
+        const avatarContent = hasPhoto ? '' : m.avatarText;
+
         row.innerHTML = `
           <div class="member-avatar-box">
-            <div class="member-avatar-circle" style="background-color: ${m.avatarBg}">
-              ${m.avatarText}
+            <div class="member-avatar-circle" style="${avatarStyle}">
+              ${avatarContent}
             </div>
             <div class="status-indicator ${m.status}"></div>
           </div>
           <div class="member-info-col">
             <div class="member-row-name">${m.name}</div>
-            <div class="member-row-activity">${m.activity}</div>
+            <div class="member-row-activity">${m.activity || m.customStatus || ''}</div>
           </div>
         `;
         row.onclick = (e) => {
@@ -549,9 +611,18 @@ class UIController {
     participants.forEach(p => {
       const card = document.createElement('div');
       card.className = `voice-card ${p.isSpeaking ? 'speaking' : ''}`;
+      card.style.cursor = 'pointer';
+      card.setAttribute('title', 'Click to view profile');
+
+      const hasPhoto = !!p.avatarPhoto;
+      const avatarStyle = hasPhoto
+        ? `background-image: url('${p.avatarPhoto}'); background-size: cover; background-position: center; border: none;`
+        : `background-color: ${p.avatarBg || '#5865F2'};`;
+      const avatarContent = hasPhoto ? '' : (p.avatarText || p.name.charAt(0));
+
       card.innerHTML = `
-        <div class="voice-card-avatar" style="background-color: ${p.avatarBg || '#5865F2'}">
-          ${p.avatarText || p.name.charAt(0)}
+        <div class="voice-card-avatar" style="${avatarStyle}">
+          ${avatarContent}
         </div>
         <div class="voice-card-name">
           <span>${p.name}</span>
@@ -559,6 +630,11 @@ class UIController {
         </div>
         <div class="voice-card-tag">${p.isSpeaking ? '🟢 Speaking' : 'Connected'}</div>
       `;
+
+      card.onclick = (e) => {
+        this.openMemberProfilePopover(p, e);
+      };
+
       stage.appendChild(card);
     });
   }
@@ -632,10 +708,22 @@ class UIController {
 
     if (nameEl) nameEl.textContent = me.name;
     if (subtextEl) subtextEl.textContent = me.customStatus || me.role;
-    if (avatarEl) avatarEl.style.backgroundColor = me.avatarBg;
-    if (initialsEl) initialsEl.textContent = me.avatarText;
+
+    if (avatarEl) {
+      if (me.avatarPhoto) {
+        avatarEl.style.backgroundImage = `url(${me.avatarPhoto})`;
+        avatarEl.style.backgroundSize = 'cover';
+        avatarEl.style.backgroundPosition = 'center';
+        if (initialsEl) initialsEl.textContent = '';
+      } else {
+        avatarEl.style.backgroundImage = 'none';
+        avatarEl.style.backgroundColor = me.avatarBg || '#5865F2';
+        if (initialsEl) initialsEl.textContent = me.avatarText || me.name.substring(0, 2).toUpperCase();
+      }
+    }
+
     if (statusDot) {
-      statusDot.className = `status-indicator ${me.status}`;
+      statusDot.className = `status-indicator ${me.status || 'online'}`;
     }
 
     this.updateUserBarControls();
@@ -733,36 +821,117 @@ class UIController {
 
   openMemberProfilePopover(member, event) {
     const pop = document.getElementById('member-profile-popover');
-    if (!pop) return;
+    if (!pop || !member) return;
 
-    document.getElementById('popover-username').textContent = member.name;
-    document.getElementById('popover-custom-status').textContent = member.activity || 'Active on UniCord';
-    document.getElementById('popover-about').textContent = member.bio || 'Proud university student!';
-    document.getElementById('popover-avatar').textContent = member.avatarText;
-    document.getElementById('popover-avatar').style.backgroundColor = member.avatarBg;
-    document.getElementById('popover-status').className = `status-indicator ${member.status}`;
+    // 1. Banner
+    const bannerEl = document.getElementById('popover-banner');
+    if (bannerEl) {
+      bannerEl.style.backgroundColor = member.bannerColor || member.avatarBg || '#5865F2';
+    }
 
+    // 2. Avatar
+    const avatarEl = document.getElementById('popover-avatar');
+    if (avatarEl) {
+      if (member.avatarPhoto) {
+        avatarEl.style.backgroundImage = `url(${member.avatarPhoto})`;
+        avatarEl.style.backgroundSize = 'cover';
+        avatarEl.style.backgroundPosition = 'center';
+        avatarEl.textContent = '';
+      } else {
+        avatarEl.style.backgroundImage = 'none';
+        avatarEl.style.backgroundColor = member.avatarBg || '#5865F2';
+        avatarEl.textContent = member.avatarText || member.name.substring(0, 2).toUpperCase();
+      }
+    }
+
+    // 3. Status Dot
+    const statusDot = document.getElementById('popover-status');
+    if (statusDot) {
+      statusDot.className = `status-indicator ${member.status || 'online'}`;
+    }
+
+    // 4. Username & Tag
+    const usernameEl = document.getElementById('popover-username');
+    const discEl = document.getElementById('popover-discriminator');
+    if (usernameEl) usernameEl.textContent = member.name.replace(' (You)', '');
+    if (discEl) discEl.textContent = member.discriminator ? `#${member.discriminator}` : '#UniCord';
+
+    // 5. Custom Status
+    const customStatusEl = document.getElementById('popover-custom-status');
+    if (customStatusEl) {
+      const statusText = member.customStatus || member.activity || 'Active on UniCord';
+      customStatusEl.textContent = statusText;
+      customStatusEl.style.display = statusText ? 'block' : 'none';
+    }
+
+    // 6. About Me / Bio
+    const aboutEl = document.getElementById('popover-about');
+    if (aboutEl) {
+      aboutEl.textContent = member.bio || 'Proud university student on UniCord!';
+    }
+
+    // 7. Roles Tag
     const rolesContainer = document.getElementById('popover-roles');
-    rolesContainer.innerHTML = `
-      <div class="popover-role-tag">
-        <span class="popover-role-dot" style="background-color: ${member.avatarBg}"></span>
-        <span>${member.role}</span>
-      </div>
-    `;
+    if (rolesContainer) {
+      const roleText = member.role || 'Student';
+      rolesContainer.innerHTML = `
+        <div class="popover-role-tag">
+          <span class="popover-role-dot" style="background-color: ${member.avatarBg || '#5865F2'}"></span>
+          <span>${roleText}</span>
+        </div>
+      `;
+    }
 
-    // Position popover
-    const rect = event.currentTarget.getBoundingClientRect();
-    pop.style.top = Math.min(window.innerHeight - 380, Math.max(10, rect.top - 20)) + 'px';
-    pop.style.left = (rect.left - 310) + 'px';
+    // 8. Action button
+    const btnDm = document.getElementById('popover-btn-dm');
+    if (btnDm) {
+      const isSelf = member.id === window.stateManager.state.currentUser.id || member.name.includes('(You)');
+      if (isSelf) {
+        btnDm.textContent = '✏️ Edit Profile';
+        btnDm.onclick = () => {
+          pop.style.display = 'none';
+          this.openEditProfileModal();
+        };
+      } else {
+        btnDm.textContent = '💬 Message @' + member.name.replace(' (You)', '');
+        btnDm.onclick = () => {
+          pop.style.display = 'none';
+          const msgInput = document.getElementById('message-input');
+          if (msgInput) {
+            msgInput.value = `@${member.name} ` + msgInput.value;
+            msgInput.focus();
+          }
+        };
+      }
+    }
+
+    // 9. Smart Viewport Positioning
+    let clientX = 100;
+    let clientY = 100;
+    if (event && event.currentTarget) {
+      const rect = event.currentTarget.getBoundingClientRect();
+      if (rect.left > window.innerWidth / 2) {
+        clientX = Math.max(10, rect.left - 315);
+      } else {
+        clientX = Math.min(window.innerWidth - 320, rect.right + 15);
+      }
+      clientY = Math.min(window.innerHeight - 390, Math.max(15, rect.top - 20));
+    } else if (event) {
+      clientX = Math.min(window.innerWidth - 320, Math.max(10, event.clientX + 10));
+      clientY = Math.min(window.innerHeight - 390, Math.max(10, event.clientY - 20));
+    }
+
+    pop.style.left = `${clientX}px`;
+    pop.style.top = `${clientY}px`;
     pop.style.display = 'block';
 
     const closeHandler = (e) => {
-      if (!pop.contains(e.target)) {
+      if (!pop.contains(e.target) && (!event || !event.currentTarget || !event.currentTarget.contains(e.target))) {
         pop.style.display = 'none';
         document.removeEventListener('click', closeHandler);
       }
     };
-    setTimeout(() => document.addEventListener('click', closeHandler), 10);
+    setTimeout(() => document.addEventListener('click', closeHandler), 20);
   }
 
   openCreateChannelModal(categoryId, categoryName) {

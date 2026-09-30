@@ -391,6 +391,35 @@ class NetworkEngine {
     this.mqttClient.publish(topic, payload);
   }
 
+  broadcastProfileUpdate() {
+    if (!this.mqttClient || !this.isConnected) return;
+    const me = window.stateManager.state.currentUser;
+    const activeVoice = window.stateManager.state.activeVoiceChannelId;
+
+    const payload = JSON.stringify({
+      type: 'PROFILE_UPDATE',
+      userId: this.userId,
+      sessionId: this.sessionId,
+      peerId: this.peerId,
+      name: me.name,
+      avatarText: me.avatarText,
+      avatarBg: me.avatarBg,
+      avatarPhoto: me.avatarPhoto || null,
+      role: me.role || 'Student',
+      customStatus: me.customStatus || '',
+      bio: me.bio || '',
+      bannerColor: me.bannerColor || '#5865F2',
+      activeVoiceChannelId: activeVoice,
+      isMuted: window.stateManager.state.isMuted,
+      timestamp: Date.now()
+    });
+
+    this.mqttClient.publish('unicord/presence/global', payload);
+    if (activeVoice) {
+      this.mqttClient.publish(`unicord/voice/${activeVoice}`, payload);
+    }
+  }
+
   broadcastVoiceJoin(channelId) {
     if (!this.mqttClient || !this.isConnected) return;
     const me = window.stateManager.state.currentUser;
@@ -403,6 +432,11 @@ class NetworkEngine {
       name: me.name,
       avatarText: me.avatarText,
       avatarBg: me.avatarBg,
+      avatarPhoto: me.avatarPhoto || null,
+      role: me.role || 'Student',
+      customStatus: me.customStatus || '',
+      bio: me.bio || '',
+      bannerColor: me.bannerColor || '#5865F2',
       channelId,
       isMuted: window.stateManager.state.isMuted
     });
@@ -422,6 +456,11 @@ class NetworkEngine {
       name: me.name,
       avatarText: me.avatarText,
       avatarBg: me.avatarBg,
+      avatarPhoto: me.avatarPhoto || null,
+      role: me.role || 'Student',
+      customStatus: me.customStatus || '',
+      bio: me.bio || '',
+      bannerColor: me.bannerColor || '#5865F2',
       channelId,
       isMuted: window.stateManager.state.isMuted
     });
@@ -491,6 +530,11 @@ class NetworkEngine {
         name: me.name,
         avatarText: me.avatarText,
         avatarBg: me.avatarBg,
+        avatarPhoto: me.avatarPhoto || null,
+        role: me.role || 'Student',
+        customStatus: me.customStatus || '',
+        bio: me.bio || '',
+        bannerColor: me.bannerColor || '#5865F2',
         activeVoiceChannelId: activeVoice,
         isMuted: window.stateManager.state.isMuted,
         timestamp: Date.now()
@@ -543,6 +587,7 @@ class NetworkEngine {
     if (changed) {
       window.uiController?.renderChannels();
       window.uiController?.renderVoiceStage();
+      window.uiController?.renderMembers();
     }
   }
 
@@ -565,6 +610,22 @@ class NetworkEngine {
         window.audioEngine?.playMessagePing();
         if (window.stateManager.state.activeChannelId === channelId) {
           window.uiController?.renderMessages();
+        }
+
+        // Also track sender in remotePresence with profile info
+        if (data.senderId && data.message.author) {
+          const a = data.message.author;
+          const prev = this.remotePresence.get(data.senderId) || {};
+          this.remotePresence.set(data.senderId, {
+            ...prev,
+            name: a.name || prev.name,
+            avatarText: a.avatarText || prev.avatarText,
+            avatarBg: a.avatarBg || prev.avatarBg,
+            avatarPhoto: a.avatarPhoto !== undefined ? a.avatarPhoto : prev.avatarPhoto,
+            role: a.role || prev.role || 'Student',
+            lastSeen: Date.now()
+          });
+          window.uiController?.renderMembers();
         }
       }
       return;
@@ -592,6 +653,7 @@ class NetworkEngine {
       if (data.peerId) {
         this.cleanupPeer(data.peerId);
       }
+      window.uiController?.renderMembers();
       return;
     }
 
@@ -609,13 +671,19 @@ class NetworkEngine {
     }
 
     const activeVoice = data.activeVoiceChannelId || data.channelId;
+    const prev = this.remotePresence.get(uid) || {};
     this.remotePresence.set(uid, {
-      name: data.name,
+      name: data.name || prev.name,
       channelId: activeVoice,
-      peerId: data.peerId,
+      peerId: data.peerId || prev.peerId,
       lastSeen: Date.now(),
-      avatarBg: data.avatarBg,
-      avatarText: data.avatarText,
+      avatarBg: data.avatarBg || prev.avatarBg,
+      avatarText: data.avatarText || prev.avatarText,
+      avatarPhoto: data.avatarPhoto !== undefined ? data.avatarPhoto : prev.avatarPhoto,
+      role: data.role || prev.role || 'Student',
+      customStatus: data.customStatus !== undefined ? data.customStatus : prev.customStatus,
+      bio: data.bio !== undefined ? data.bio : prev.bio,
+      bannerColor: data.bannerColor || prev.bannerColor,
       isMuted: data.isMuted || false
     });
 
@@ -634,6 +702,11 @@ class NetworkEngine {
           name: data.name,
           avatarText: data.avatarText || data.name.substring(0, 2).toUpperCase(),
           avatarBg: data.avatarBg || '#23a55a',
+          avatarPhoto: data.avatarPhoto || null,
+          role: data.role || 'Student',
+          customStatus: data.customStatus || '',
+          bio: data.bio || '',
+          bannerColor: data.bannerColor || data.avatarBg || '#5865F2',
           isSpeaking: false,
           isMuted: data.isMuted || false
         };
@@ -641,12 +714,19 @@ class NetworkEngine {
         window.uiController?.renderChannels();
         window.uiController?.renderVoiceStage();
       } else {
-        p.peerId = data.peerId;
+        p.peerId = data.peerId || p.peerId;
         p.isRealPeer = true;
-        p.name = data.name;
+        if (data.name) p.name = data.name;
+        if (data.avatarPhoto !== undefined) p.avatarPhoto = data.avatarPhoto;
+        if (data.role) p.role = data.role;
+        if (data.customStatus !== undefined) p.customStatus = data.customStatus;
+        if (data.bio !== undefined) p.bio = data.bio;
+        if (data.bannerColor) p.bannerColor = data.bannerColor;
         if (typeof data.isMuted === 'boolean') {
           p.isMuted = data.isMuted;
         }
+        window.uiController?.renderChannels();
+        window.uiController?.renderVoiceStage();
       }
 
       // If friend just sent JOIN and we are in the channel, send immediate VOICE_ACK back!
@@ -662,6 +742,9 @@ class NetworkEngine {
         }
       }
     }
+
+    // Refresh member list so online peers show up with their latest profile!
+    window.uiController?.renderMembers();
   }
 
   async initiateVoiceCallToPeer(remotePeerId) {

@@ -795,7 +795,7 @@ document.addEventListener('DOMContentLoaded', () => {
     };
   });
 
-  // Photo upload
+  // Photo upload with automatic square crop & lightweight compression
   if (btnUploadAvatarFile && avatarFileInput) {
     btnUploadAvatarFile.onclick = () => avatarFileInput.click();
     avatarFileInput.onchange = (e) => {
@@ -803,9 +803,25 @@ document.addEventListener('DOMContentLoaded', () => {
       if (!file) return;
       const reader = new FileReader();
       reader.onload = (event) => {
-        window.stateManager.state.currentUser.avatarPhoto = event.target.result;
-        if (btnRemoveAvatarPhoto) btnRemoveAvatarPhoto.style.display = 'inline-block';
-        window.uiController.updateLiveProfilePreview();
+        const img = new Image();
+        img.onload = () => {
+          // Crop and compress into clean 160x160 square JPEG for fast WebSockets & localStorage
+          const canvas = document.createElement('canvas');
+          const size = 160;
+          canvas.width = size;
+          canvas.height = size;
+          const ctx = canvas.getContext('2d');
+          const minDim = Math.min(img.width, img.height);
+          const sx = (img.width - minDim) / 2;
+          const sy = (img.height - minDim) / 2;
+          ctx.drawImage(img, sx, sy, minDim, minDim, 0, 0, size, size);
+
+          const compressedDataUrl = canvas.toDataURL('image/jpeg', 0.85);
+          window.stateManager.state.currentUser.avatarPhoto = compressedDataUrl;
+          if (btnRemoveAvatarPhoto) btnRemoveAvatarPhoto.style.display = 'inline-block';
+          window.uiController.updateLiveProfilePreview();
+        };
+        img.src = event.target.result;
       };
       reader.readAsDataURL(file);
     };
@@ -840,6 +856,10 @@ document.addEventListener('DOMContentLoaded', () => {
           p.avatarText = me.avatarText;
           p.avatarBg = me.avatarBg;
           p.avatarPhoto = me.avatarPhoto || null;
+          p.role = me.role;
+          p.customStatus = me.customStatus;
+          p.bio = me.bio;
+          p.bannerColor = me.bannerColor;
         }
       }
 
@@ -852,6 +872,14 @@ document.addEventListener('DOMContentLoaded', () => {
       window.uiController.renderVoiceStage();
       window.uiController.renderMembers();
       window.uiController.renderMessages();
+
+      // Broadcast profile changes across the internet to all connected friends!
+      if (window.networkEngine) {
+        window.networkEngine.broadcastProfileUpdate();
+        if (activeVc) {
+          window.networkEngine.broadcastVoiceJoin(activeVc);
+        }
+      }
 
       // Play success chime
       window.audioEngine.playMessagePing();

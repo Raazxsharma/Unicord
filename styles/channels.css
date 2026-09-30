@@ -457,6 +457,7 @@
 .user-controls {
   display: flex;
   align-items: center;
+  flex-shrink: 0;
 }
 
 .ctrl-btn {
@@ -466,6 +467,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
+  flex-shrink: 0;
   color: var(--text-interactive);
   transition: background-color var(--transition-fast), color var(--transition-fast);
 }

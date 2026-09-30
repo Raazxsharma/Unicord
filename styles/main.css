@@ -176,7 +176,8 @@ input, textarea {
 .app-layout {
   display: flex;
   width: 100vw;
-  height: 100vh;
+  height: 100vh; /* Fallback for older browsers */
+  height: 100dvh;
   overflow: hidden;
   position: relative;
 }

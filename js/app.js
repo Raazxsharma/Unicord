@@ -214,6 +214,11 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
+  const btnSendMessage = document.getElementById('btn-send-message');
+  if (btnSendMessage) {
+    btnSendMessage.onclick = sendMessage;
+  }
+
   // 3. File & Image Attachment Staging & Upload
   const btnAttach = document.getElementById('btn-attach');
   const fileInput = document.getElementById('file-upload-input');

@@ -609,6 +609,9 @@ class UIController {
       vid.autoplay = true;
       vid.playsInline = true;
       vid.srcObject = window.voiceController.screenStream;
+      vid.onloadedmetadata = () => {
+        vid.play().catch(e => console.warn('Local screen video play error:', e));
+      };
 
       const overlay = document.createElement('div');
       overlay.className = 'screen-share-preview';
@@ -637,6 +640,9 @@ class UIController {
         vid.autoplay = true;
         vid.playsInline = true;
         vid.srcObject = p.remoteStream;
+        vid.onloadedmetadata = () => {
+          vid.play().catch(e => console.warn('Remote screen video play error:', e));
+        };
 
         const overlay = document.createElement('div');
         overlay.className = 'screen-share-preview';

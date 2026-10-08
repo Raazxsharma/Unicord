@@ -675,28 +675,89 @@ class UIController {
         const remoteScreenTile = document.createElement('div');
         remoteScreenTile.className = 'voice-screenshare-tile';
         
-        const vid = document.createElement('video');
-        vid.style.width = '100%';
-        vid.style.height = '100%';
-        vid.style.objectFit = 'contain';
-        vid.style.backgroundColor = '#000';
-        vid.muted = true; // Audio is handled separately
-        vid.autoplay = true;
-        vid.playsInline = true;
-        vid.srcObject = p.remoteStream;
-        vid.onloadedmetadata = () => {
-          vid.play().catch(e => console.warn('Remote screen video play error:', e));
-        };
+        if (!p.isWatchingStream) {
+          remoteScreenTile.style.backgroundColor = '#1e1f22';
+          remoteScreenTile.style.display = 'flex';
+          remoteScreenTile.style.flexDirection = 'column';
+          remoteScreenTile.style.alignItems = 'center';
+          remoteScreenTile.style.justifyContent = 'center';
+          remoteScreenTile.style.position = 'relative';
 
-        const overlay = document.createElement('div');
-        overlay.className = 'screen-share-preview';
-        overlay.style.position = 'absolute';
-        overlay.style.bottom = '10px';
-        overlay.style.left = '10px';
-        overlay.innerHTML = `<div class="screen-share-title" style="background: rgba(0,0,0,0.6); padding: 4px 8px; border-radius: 4px;">${p.name}'s Screen</div>`;
+          const liveBadge = document.createElement('div');
+          liveBadge.innerText = 'LIVE';
+          liveBadge.style.position = 'absolute';
+          liveBadge.style.top = '10px';
+          liveBadge.style.left = '10px';
+          liveBadge.style.background = '#f23f43';
+          liveBadge.style.color = '#fff';
+          liveBadge.style.padding = '2px 6px';
+          liveBadge.style.borderRadius = '4px';
+          liveBadge.style.fontSize = '12px';
+          liveBadge.style.fontWeight = 'bold';
+          remoteScreenTile.appendChild(liveBadge);
+
+          const hasPhoto = !!p.avatarPhoto;
+          const avatarStyle = hasPhoto
+            ? `background-image: url('${p.avatarPhoto}'); background-size: cover; background-position: center; border: none;`
+            : `background-color: ${p.avatarBg || '#5865F2'};`;
+          const avatarContent = hasPhoto ? '' : (p.avatarText || p.name.charAt(0));
+
+          const infoWrap = document.createElement('div');
+          infoWrap.style.textAlign = 'center';
+          infoWrap.style.marginBottom = '16px';
+          infoWrap.innerHTML = `
+            <div style="width: 80px; height: 80px; border-radius: 50%; ${avatarStyle} margin: 0 auto 12px auto; display: flex; align-items: center; justify-content: center; font-size: 32px; font-weight: bold; color: #fff;">
+              ${avatarContent}
+            </div>
+            <div style="color: #fff; font-weight: 600; font-size: 16px;">${p.name} is streaming</div>
+          `;
+          remoteScreenTile.appendChild(infoWrap);
+
+          const watchBtn = document.createElement('button');
+          watchBtn.className = 'btn-primary';
+          watchBtn.innerText = 'Watch Stream';
+          watchBtn.onclick = () => {
+            p.isWatchingStream = true;
+            this.renderVoiceStage();
+          };
+          remoteScreenTile.appendChild(watchBtn);
+
+        } else {
+          const vid = document.createElement('video');
+          vid.style.width = '100%';
+          vid.style.height = '100%';
+          vid.style.objectFit = 'contain';
+          vid.style.backgroundColor = '#000';
+          vid.muted = true; // Audio is handled separately
+          vid.autoplay = true;
+          vid.playsInline = true;
+          vid.srcObject = p.remoteStream;
+          vid.onloadedmetadata = () => {
+            vid.play().catch(e => console.warn('Remote screen video play error:', e));
+          };
+
+          const overlay = document.createElement('div');
+          overlay.className = 'screen-share-preview';
+          overlay.style.position = 'absolute';
+          overlay.style.bottom = '10px';
+          overlay.style.left = '10px';
+          overlay.style.display = 'flex';
+          overlay.style.alignItems = 'center';
+          overlay.style.gap = '8px';
+          overlay.innerHTML = `
+            <div style="background: rgba(0,0,0,0.6); padding: 4px 8px; border-radius: 4px;">${p.name}'s Screen</div>
+            <button style="background: rgba(0,0,0,0.6); border: none; padding: 4px 8px; color: #fff; border-radius: 4px; cursor: pointer;" title="Stop Watching">Stop</button>
+          `;
+          
+          overlay.querySelector('button').onclick = () => {
+            p.isWatchingStream = false;
+            this.renderVoiceStage();
+          };
+          
+          remoteScreenTile.appendChild(vid);
+          remoteScreenTile.appendChild(overlay);
+        }
         
-        remoteScreenTile.appendChild(vid);
-        remoteScreenTile.appendChild(overlay);
         stage.appendChild(remoteScreenTile);
       }
 

@@ -187,6 +187,7 @@ class VoiceController {
       }
       this.isCameraOn = true;
     }
+    if (window.networkEngine) window.networkEngine.reconnectWebRTC();
     window.uiController.renderVoiceStage();
     window.uiController.updateVoiceConnectionUI(true);
   }
@@ -197,6 +198,7 @@ class VoiceController {
       this.cameraStream = null;
     }
     this.isCameraOn = false;
+    if (window.networkEngine) window.networkEngine.reconnectWebRTC();
     window.uiController.renderVoiceStage();
     window.uiController.updateVoiceConnectionUI(true);
   }

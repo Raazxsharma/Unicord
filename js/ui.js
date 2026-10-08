@@ -607,6 +607,7 @@ class UIController {
       vid.style.backgroundColor = '#000';
       vid.muted = true;
       vid.autoplay = true;
+      vid.playsInline = true;
       vid.srcObject = window.voiceController.screenStream;
 
       const overlay = document.createElement('div');
@@ -634,6 +635,7 @@ class UIController {
         vid.style.backgroundColor = '#000';
         vid.muted = true; // Audio is handled separately
         vid.autoplay = true;
+        vid.playsInline = true;
         vid.srcObject = p.remoteStream;
 
         const overlay = document.createElement('div');

@@ -201,6 +201,7 @@ class UIController {
 
       item.onclick = () => {
         window.stateManager.state.activeGuildId = guild.id;
+        guild.unread = false;
         // Select first text channel in the guild
         const firstChan = guild.categories[0]?.channels[0];
         if (firstChan) {
@@ -495,7 +496,9 @@ class UIController {
             <span class="message-timestamp">${msg.timestamp}</span>
           </div>
           <div class="message-body">${parsedHtml}</div>
-          ${msg.image ? `<img src="${msg.image}" class="message-attachment-image" alt="Attachment" />` : ''}
+          ${msg.image ? `<img src="${msg.image}" class="message-attachment-image" style="max-width: 300px; border-radius: 8px; margin-top: 8px;" alt="Attachment" />` : ''}
+          ${msg.attachment && msg.attachment.isImage ? `<img src="${msg.attachment.url}" class="message-attachment-image" style="max-width: 300px; border-radius: 8px; margin-top: 8px;" alt="Attachment" />` : ''}
+          ${msg.attachment && !msg.attachment.isImage ? `<div style="margin-top: 8px; padding: 12px; background: var(--bg-modifier-hover); border-radius: 4px; display: inline-block;">📄 <b>${msg.attachment.name}</b> (${msg.attachment.size})</div>` : ''}
           <div class="reactions-row" id="reactions-${msg.id}">
             ${(msg.reactions || []).map(r => `
               <div class="reaction-pill ${r.reacted ? 'reacted' : ''}" onclick="window.uiController.toggleReaction('${msg.id}', '${r.emoji}')">
@@ -514,9 +517,10 @@ class UIController {
           <button class="msg-tool-btn" title="Reply" onclick="window.uiController.quoteReply('${msg.author.name}')">
             <svg viewBox="0 0 24 24" width="18" height="18"><path fill="currentColor" d="M10 9V5l-7 7 7 7v-4.1c5 0 8.5 1.6 11 5.1-1-5-4-10-11-11z"/></svg>
           </button>
+          ${msg.author.name === window.stateManager.state.currentUser.name || msg.author.name === window.stateManager.state.currentUser.name + ' (You)' ? `
           <button class="msg-tool-btn delete-btn" title="Delete Message" onclick="window.uiController.deleteMessage('${msg.id}')">
             <svg viewBox="0 0 24 24" width="16" height="16"><path fill="currentColor" d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>
-          </button>
+          </button>` : ''}
         </div>
       `;
 
@@ -1022,6 +1026,14 @@ class UIController {
   }
 
   toggleReaction(msgId, emoji) {
+    this.toggleReactionLocal(msgId, emoji, true);
+    const ch = window.stateManager.getCurrentChannel();
+    if (ch && window.networkEngine) {
+      window.networkEngine.broadcastMessageReaction(ch.id, msgId, emoji);
+    }
+  }
+
+  toggleReactionLocal(msgId, emoji, isLocal = false) {
     const ch = window.stateManager.getCurrentChannel();
     if (!ch) return;
     const msgs = window.stateManager.getChannelMessages(ch.id);
@@ -1031,21 +1043,46 @@ class UIController {
     if (!msg.reactions) msg.reactions = [];
     let r = msg.reactions.find(x => x.emoji === emoji);
     if (r) {
-      if (r.reacted) {
-        r.count--;
-        r.reacted = false;
-        if (r.count <= 0) {
-          msg.reactions = msg.reactions.filter(x => x !== r);
+      if (isLocal) {
+        if (r.reacted) {
+          r.count--;
+          r.reacted = false;
+          if (r.count <= 0) {
+            msg.reactions = msg.reactions.filter(x => x !== r);
+          }
+        } else {
+          r.count++;
+          r.reacted = true;
         }
       } else {
-        r.count++;
-        r.reacted = true;
+        r.count++; // Remote user reacted
       }
     } else {
-      msg.reactions.push({ emoji, count: 1, reacted: true });
+      msg.reactions.push({ emoji, count: 1, reacted: isLocal });
     }
     window.stateManager.saveState();
     this.renderMessages();
+  }
+
+  showTypingIndicator(name) {
+    let typingBar = document.getElementById('typing-indicator-bar');
+    if (!typingBar) {
+      typingBar = document.createElement('div');
+      typingBar.id = 'typing-indicator-bar';
+      typingBar.style.padding = '0 20px 8px 20px';
+      typingBar.style.fontSize = '12px';
+      typingBar.style.color = 'var(--text-muted)';
+      typingBar.style.fontWeight = 'bold';
+      typingBar.style.fontStyle = 'italic';
+      const container = document.getElementById('chat-input-area');
+      if (container) container.parentNode.insertBefore(typingBar, container);
+    }
+    typingBar.textContent = `${name} is typing...`;
+    
+    if (this.typingTimeout) clearTimeout(this.typingTimeout);
+    this.typingTimeout = setTimeout(() => {
+      if (typingBar) typingBar.textContent = '';
+    }, 2000);
   }
 
   quoteReply(username) {

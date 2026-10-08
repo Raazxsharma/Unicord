@@ -377,6 +377,9 @@ class StateManager {
     if (this.state.messages[channelId]) {
       this.state.messages[channelId] = this.state.messages[channelId].filter(m => m.id !== messageId);
       this.saveState();
+      if (window.networkEngine) {
+        window.networkEngine.broadcastMessageDeletion(channelId, messageId);
+      }
     }
   }
 

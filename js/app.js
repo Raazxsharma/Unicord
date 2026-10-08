@@ -207,10 +207,15 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     });
 
-    // Auto-expand textarea
+    // Auto-expand textarea & typing indicator
     msgInput.addEventListener('input', () => {
       msgInput.style.height = 'auto';
       msgInput.style.height = Math.min(140, msgInput.scrollHeight) + 'px';
+      
+      const ch = window.stateManager.getCurrentChannel();
+      if (ch && window.networkEngine) {
+        window.networkEngine.broadcastTyping(ch.id);
+      }
     });
   }
 

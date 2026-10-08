@@ -101,6 +101,7 @@ class NetworkEngine {
         this.isConnected = true;
 
         this.mqttClient.subscribe('unicord/chat/#', { qos: 0 });
+        this.mqttClient.subscribe('unicord/typing/#', { qos: 0 });
         this.mqttClient.subscribe('unicord/voice/#', { qos: 0 });
         this.mqttClient.subscribe('unicord/presence/#', { qos: 0 });
 
@@ -424,6 +425,41 @@ class NetworkEngine {
     this.mqttClient.publish(topic, payload);
   }
 
+  broadcastMessageDeletion(channelId, messageId) {
+    if (!this.mqttClient || !this.isConnected) return;
+    const topic = `unicord/chat/${channelId}`;
+    const payload = JSON.stringify({
+      senderId: this.userId,
+      channelId,
+      type: 'DELETE_MESSAGE',
+      messageId
+    });
+    this.mqttClient.publish(topic, payload);
+  }
+
+  broadcastMessageReaction(channelId, messageId, emoji) {
+    if (!this.mqttClient || !this.isConnected) return;
+    const topic = `unicord/chat/${channelId}`;
+    const payload = JSON.stringify({
+      senderId: this.userId,
+      channelId,
+      type: 'REACTION',
+      messageId,
+      emoji
+    });
+    this.mqttClient.publish(topic, payload);
+  }
+
+  broadcastTyping(channelId) {
+    if (!this.mqttClient || !this.isConnected) return;
+    const topic = `unicord/typing/${channelId}`;
+    const payload = JSON.stringify({
+      senderId: this.userId,
+      name: window.stateManager.state.currentUser.name
+    });
+    this.mqttClient.publish(topic, payload);
+  }
+
   broadcastProfileUpdate() {
     if (!this.mqttClient || !this.isConnected) return;
     const me = window.stateManager.state.currentUser;
@@ -636,6 +672,20 @@ class NetworkEngine {
     // Chat Message
     if (topic.startsWith('unicord/chat/')) {
       const channelId = topic.replace('unicord/chat/', '');
+      
+      if (data.type === 'DELETE_MESSAGE') {
+        window.stateManager.deleteMessage(channelId, data.messageId);
+        if (window.stateManager.state.activeChannelId === channelId) {
+          window.uiController?.renderMessages();
+        }
+        return;
+      }
+      
+      if (data.type === 'REACTION') {
+        window.uiController?.toggleReactionLocal(data.messageId, data.emoji, false);
+        return;
+      }
+
       const existing = window.stateManager.getChannelMessages(channelId);
       const exists = existing.some(m => m.id === data.message.id);
       if (!exists) {
@@ -643,6 +693,15 @@ class NetworkEngine {
         window.audioEngine?.playMessagePing();
         if (window.stateManager.state.activeChannelId === channelId) {
           window.uiController?.renderMessages();
+        } else {
+          const guild = window.stateManager.state.guilds.find(g => 
+            g.categories.some(c => c.channels.some(ch => ch.id === channelId))
+          );
+          if (guild) {
+            guild.unread = true;
+            window.stateManager.saveState();
+            window.uiController?.renderGuilds();
+          }
         }
 
         // Also track sender in remotePresence with profile info
@@ -660,6 +719,14 @@ class NetworkEngine {
           });
           window.uiController?.renderMembers();
         }
+      }
+      return;
+    }
+
+    if (topic.startsWith('unicord/typing/')) {
+      const channelId = topic.replace('unicord/typing/', '');
+      if (window.stateManager.state.activeChannelId === channelId) {
+        window.uiController?.showTypingIndicator(data.name);
       }
       return;
     }

@@ -4,6 +4,10 @@
  */
 
 var STORAGE_KEY = 'unicord_app_state_v1';
+const loggedInPhone = localStorage.getItem('unicord_logged_in_phone');
+if (loggedInPhone) {
+  STORAGE_KEY = 'unicord_app_state_phone_' + loggedInPhone;
+}
 
 var DEFAULT_STATE = {
   currentUser: {

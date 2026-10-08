@@ -770,14 +770,14 @@ class UIController {
           const overlay = document.createElement('div');
           overlay.className = 'screen-share-preview';
           overlay.style.position = 'absolute';
-          overlay.style.bottom = '10px';
+          overlay.style.top = '10px';
           overlay.style.left = '10px';
           overlay.style.display = 'flex';
           overlay.style.alignItems = 'center';
-          overlay.style.gap = '8px';
           overlay.innerHTML = `
-            <div style="background: rgba(0,0,0,0.6); padding: 4px 8px; border-radius: 4px;">${p.name}'s Screen</div>
-            <button style="background: rgba(0,0,0,0.6); border: none; padding: 4px 8px; color: #fff; border-radius: 4px; cursor: pointer;" title="Stop Watching">Stop</button>
+            <button style="background: rgba(0,0,0,0.6); border: none; padding: 4px; color: #fff; border-radius: 50%; cursor: pointer; width: 28px; height: 28px; display: flex; align-items: center; justify-content: center;" title="Stop Watching">
+              <svg viewBox="0 0 24 24" width="16" height="16"><path fill="currentColor" d="M18.3 5.71a.996.996 0 0 0-1.41 0L12 10.59 7.11 5.7a.996.996 0 1 0-1.41 1.41L10.59 12 5.7 16.89a.996.996 0 1 0 1.41 1.41L12 13.41l4.89 4.89a.996.996 0 1 0 1.41-1.41L13.41 12l4.89-4.89c.38-.38.38-1.02 0-1.4z"/></svg>
+            </button>
           `;
           
           overlay.querySelector('button').onclick = () => {

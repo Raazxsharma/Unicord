@@ -5216,6 +5216,43 @@ input, textarea {
     </div>
   </div>
 
+<!-- Initial Login / Setup Modal -->
+  <div class="modal-backdrop" id="modal-initial-login" style="background: #1e1f22; z-index: 99999999;">
+    <div class="modal-dialog" style="width: 480px; max-width: 90%; text-align: center; padding: 32px; background: #313338; border-radius: 8px;">
+      <h2 style="color: #fff; font-size: 24px; margin-bottom: 8px;">Welcome back!</h2>
+      <p style="color: #b5bac1; font-size: 16px; margin-bottom: 24px;">We're so excited to see you again!</p>
+      
+      <div class="form-group" style="text-align: left;">
+        <label class="form-label" for="login-phone" style="color: #b5bac1; font-size: 12px; font-weight: bold; margin-bottom: 8px; display: block;">PHONE NUMBER <span style="color: #f23f43;">*</span></label>
+        <input type="tel" class="form-input" id="login-phone" placeholder="Enter your phone number" style="background: #1e1f22; border: none; height: 40px; color: #fff; padding: 10px; border-radius: 4px; width: 100%; margin-bottom: 24px; font-size: 16px; outline: none; box-sizing: border-box;" />
+      </div>
+
+      <button class="btn-primary" id="btn-submit-login" style="width: 100%; height: 44px; font-size: 16px; font-weight: bold; margin-bottom: 12px; border-radius: 4px; cursor: pointer; border: none; background: #5865F2; color: #fff;">Log In</button>
+      <p style="color: #949ba4; font-size: 14px;">Need an account? <span style="color: #00a8fc; cursor: pointer;">Register</span></p>
+    </div>
+  </div>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      const loginModal = document.getElementById('modal-initial-login');
+      const loginBtn = document.getElementById('btn-submit-login');
+      const phoneInput = document.getElementById('login-phone');
+      
+      if (localStorage.getItem('unicord_logged_in_phone')) {
+        loginModal.style.display = 'none';
+      }
+      
+      loginBtn.onclick = () => {
+        const phone = phoneInput.value.trim();
+        if (phone.length >= 7) {
+          localStorage.setItem('unicord_logged_in_phone', phone);
+          window.location.reload();
+        } else {
+          alert("Please enter a valid phone number.");
+        }
+      };
+    });
+  </script>
 <script id="unicord-bundle">
 // --- audio.js ---
 /**
@@ -5872,6 +5909,10 @@ window.MarkdownParser = MarkdownParser;
  */
 
 var STORAGE_KEY = 'unicord_app_state_v1';
+const loggedInPhone = localStorage.getItem('unicord_logged_in_phone');
+if (loggedInPhone) {
+  STORAGE_KEY = 'unicord_app_state_phone_' + loggedInPhone;
+}
 
 var DEFAULT_STATE = {
   currentUser: {
@@ -7311,7 +7352,11 @@ class VoiceController {
       try {
         if (navigator.mediaDevices && navigator.mediaDevices.getDisplayMedia) {
           this.screenStream = await navigator.mediaDevices.getDisplayMedia({
-            video: true,
+            video: {
+              width: { ideal: 1920, max: 3840 },
+              height: { ideal: 1080, max: 2160 },
+              frameRate: { ideal: 60, max: 60 }
+            },
             audio: false
           });
           this.screenStream.getVideoTracks().forEach(track => {
@@ -9279,14 +9324,14 @@ class UIController {
           const overlay = document.createElement('div');
           overlay.className = 'screen-share-preview';
           overlay.style.position = 'absolute';
-          overlay.style.bottom = '10px';
+          overlay.style.top = '10px';
           overlay.style.left = '10px';
           overlay.style.display = 'flex';
           overlay.style.alignItems = 'center';
-          overlay.style.gap = '8px';
           overlay.innerHTML = `
-            <div style="background: rgba(0,0,0,0.6); padding: 4px 8px; border-radius: 4px;">${p.name}'s Screen</div>
-            <button style="background: rgba(0,0,0,0.6); border: none; padding: 4px 8px; color: #fff; border-radius: 4px; cursor: pointer;" title="Stop Watching">Stop</button>
+            <button style="background: rgba(0,0,0,0.6); border: none; padding: 4px; color: #fff; border-radius: 50%; cursor: pointer; width: 28px; height: 28px; display: flex; align-items: center; justify-content: center;" title="Stop Watching">
+              <svg viewBox="0 0 24 24" width="16" height="16"><path fill="currentColor" d="M18.3 5.71a.996.996 0 0 0-1.41 0L12 10.59 7.11 5.7a.996.996 0 1 0-1.41 1.41L10.59 12 5.7 16.89a.996.996 0 1 0 1.41 1.41L12 13.41l4.89 4.89a.996.996 0 1 0 1.41-1.41L13.41 12l4.89-4.89c.38-.38.38-1.02 0-1.4z"/></svg>
+            </button>
           `;
           
           overlay.querySelector('button').onclick = () => {

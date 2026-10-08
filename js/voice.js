@@ -210,7 +210,11 @@ class VoiceController {
       try {
         if (navigator.mediaDevices && navigator.mediaDevices.getDisplayMedia) {
           this.screenStream = await navigator.mediaDevices.getDisplayMedia({
-            video: true,
+            video: {
+              width: { ideal: 1920, max: 3840 },
+              height: { ideal: 1080, max: 2160 },
+              frameRate: { ideal: 60, max: 60 }
+            },
             audio: false
           });
           this.screenStream.getVideoTracks().forEach(track => {

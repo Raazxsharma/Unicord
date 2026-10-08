@@ -12,6 +12,7 @@ document.addEventListener('DOMContentLoaded', () => {
   if (menuServerSettings) {
     menuServerSettings.onclick = (e) => {
       e.stopPropagation();
+      const serverDropdown = document.getElementById('server-dropdown');
       if (serverDropdown) serverDropdown.style.display = 'none';
       window.uiController.openServerSettingsModal();
     };

@@ -785,8 +785,32 @@ class UIController {
             this.renderVoiceStage();
           };
           
+          const fullscreenBtn = document.createElement('button');
+          fullscreenBtn.style.position = 'absolute';
+          fullscreenBtn.style.top = '10px';
+          fullscreenBtn.style.right = '10px';
+          fullscreenBtn.style.background = 'rgba(0,0,0,0.6)';
+          fullscreenBtn.style.border = 'none';
+          fullscreenBtn.style.padding = '4px';
+          fullscreenBtn.style.color = '#fff';
+          fullscreenBtn.style.borderRadius = '4px';
+          fullscreenBtn.style.cursor = 'pointer';
+          fullscreenBtn.title = 'Full Screen';
+          fullscreenBtn.innerHTML = '<svg viewBox="0 0 24 24" width="16" height="16"><path fill="currentColor" d="M7 14H5v5h5v-2H7v-3zm-2-4h2V7h3V5H5v5zm12 7h-3v2h5v-5h-2v3zM14 5v2h3v3h2V5h-5z"/></svg>';
+          
+          fullscreenBtn.onclick = () => {
+            if (vid.requestFullscreen) {
+              vid.requestFullscreen();
+            } else if (vid.webkitRequestFullscreen) {
+              vid.webkitRequestFullscreen();
+            } else if (vid.msRequestFullscreen) {
+              vid.msRequestFullscreen();
+            }
+          };
+          
           remoteScreenTile.appendChild(vid);
           remoteScreenTile.appendChild(overlay);
+          remoteScreenTile.appendChild(fullscreenBtn);
         }
         
         stage.appendChild(remoteScreenTile);

@@ -294,14 +294,18 @@ class VoiceController {
 
     // Turn on green speaking ring
     speaker.isSpeaking = true;
-    window.uiController.renderVoiceStage();
+    if (window.uiController.setRemoteUserSpeakingHighlight) {
+      window.uiController.setRemoteUserSpeakingHighlight(speaker.id, true);
+    }
     window.uiController.renderChannels();
 
     // Check if user has deafened their headphones
     if (window.stateManager.state.isDeafened) {
       setTimeout(() => {
         speaker.isSpeaking = false;
-        window.uiController.renderVoiceStage();
+        if (window.uiController.setRemoteUserSpeakingHighlight) {
+          window.uiController.setRemoteUserSpeakingHighlight(speaker.id, false);
+        }
         window.uiController.renderChannels();
       }, 1500);
       return;
@@ -330,13 +334,17 @@ class VoiceController {
 
       utter.onend = () => {
         speaker.isSpeaking = false;
-        window.uiController.renderVoiceStage();
+        if (window.uiController.setRemoteUserSpeakingHighlight) {
+          window.uiController.setRemoteUserSpeakingHighlight(speaker.id, false);
+        }
         window.uiController.renderChannels();
       };
 
       utter.onerror = () => {
         speaker.isSpeaking = false;
-        window.uiController.renderVoiceStage();
+        if (window.uiController.setRemoteUserSpeakingHighlight) {
+          window.uiController.setRemoteUserSpeakingHighlight(speaker.id, false);
+        }
         window.uiController.renderChannels();
       };
 
@@ -345,7 +353,9 @@ class VoiceController {
       // Fallback timer if speech synthesis is not supported
       setTimeout(() => {
         speaker.isSpeaking = false;
-        window.uiController.renderVoiceStage();
+        if (window.uiController.setRemoteUserSpeakingHighlight) {
+          window.uiController.setRemoteUserSpeakingHighlight(speaker.id, false);
+        }
         window.uiController.renderChannels();
       }, 2000);
     }

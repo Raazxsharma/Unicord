@@ -657,6 +657,7 @@ class UIController {
       }
 
       const card = document.createElement('div');
+      card.id = 'voice-card-' + p.id;
       card.className = `voice-card ${p.isSpeaking ? 'speaking' : ''}`;
       card.style.cursor = 'pointer';
       card.setAttribute('title', 'Click to view profile');
@@ -815,7 +816,27 @@ class UIController {
     if (avatarWrap) {
       avatarWrap.style.boxShadow = isSpeaking ? '0 0 0 2px var(--green)' : 'none';
     }
-    this.renderVoiceStage();
+    const me = window.stateManager.state.currentUser;
+    this.updateVoiceCardSpeakingState(me.id, isSpeaking);
+  }
+
+  setRemoteUserSpeakingHighlight(userId, isSpeaking) {
+    this.updateVoiceCardSpeakingState(userId, isSpeaking);
+  }
+
+  updateVoiceCardSpeakingState(userId, isSpeaking) {
+    const card = document.getElementById('voice-card-' + userId);
+    if (card) {
+      if (isSpeaking) {
+        card.classList.add('speaking');
+        const tag = card.querySelector('.voice-card-tag');
+        if (tag) tag.innerText = '🟢 Speaking';
+      } else {
+        card.classList.remove('speaking');
+        const tag = card.querySelector('.voice-card-tag');
+        if (tag) tag.innerText = 'Connected';
+      }
+    }
   }
 
   // 10. Reactions & Quotes

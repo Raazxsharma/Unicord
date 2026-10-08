@@ -357,7 +357,9 @@ class NetworkEngine {
           const target = participants.find(p => p.peerId === peerId || p.id === peerId);
           if (target && target.isSpeaking !== isSpeaking) {
             target.isSpeaking = isSpeaking;
-            window.uiController?.renderVoiceStage();
+            if (window.uiController?.setRemoteUserSpeakingHighlight) {
+              window.uiController.setRemoteUserSpeakingHighlight(target.id, isSpeaking);
+            }
             window.uiController?.renderChannels();
           }
         }

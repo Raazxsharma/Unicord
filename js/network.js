@@ -691,7 +691,9 @@ class NetworkEngine {
         const p = window.stateManager.state.voiceParticipants[activeVoice].find(x => x.id === uid || x.peerId === data.peerId);
         if (p) {
           p.isMuted = data.isMuted;
-          window.uiController?.renderVoiceStage();
+          if (window.uiController?.updateVoiceCardMuteState) {
+            window.uiController.updateVoiceCardMuteState(p.id, p.isMuted);
+          }
           window.uiController?.renderChannels();
         }
       }

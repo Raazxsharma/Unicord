@@ -134,7 +134,9 @@ class VoiceController {
 
     window.stateManager.saveState();
     window.uiController.updateUserBarControls();
-    window.uiController.renderVoiceStage();
+    if (window.uiController.updateVoiceCardMuteState) {
+      window.uiController.updateVoiceCardMuteState(window.stateManager.state.currentUser.id, isMuted);
+    }
     window.uiController.renderChannels();
   }
 
@@ -160,7 +162,9 @@ class VoiceController {
 
     window.stateManager.saveState();
     window.uiController.updateUserBarControls();
-    window.uiController.renderVoiceStage();
+    if (window.uiController.updateVoiceCardMuteState) {
+      window.uiController.updateVoiceCardMuteState(window.stateManager.state.currentUser.id, isDeafened || window.stateManager.state.isMuted);
+    }
     window.uiController.renderChannels();
   }
 

@@ -747,6 +747,7 @@ class NetworkEngine {
       if (chId && window.stateManager.state.voiceParticipants[chId]) {
         window.stateManager.state.voiceParticipants[chId] = 
           window.stateManager.state.voiceParticipants[chId].filter(p => p.id !== uid && p.peerId !== data.peerId);
+        window.audioEngine?.playLeaveSound();
         window.uiController?.renderChannels();
         window.uiController?.renderVoiceStage();
       }
@@ -813,6 +814,11 @@ class NetworkEngine {
           isMuted: data.isMuted || false
         };
         list.push(p);
+        
+        if (data.type === 'JOIN' && activeVoice === window.stateManager.state.activeVoiceChannelId) {
+          window.audioEngine?.playJoinSound();
+        }
+        
         window.uiController?.renderChannels();
         window.uiController?.renderVoiceStage();
       } else {

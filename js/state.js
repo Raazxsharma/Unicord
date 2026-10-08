@@ -352,6 +352,20 @@ class StateManager {
   }
 
   getCurrentChannel() {
+    if (this.state.activeGuildId === 'home' && this.state.activeChannelId && this.state.activeChannelId.startsWith('dm-')) {
+      const parts = this.state.activeChannelId.replace('dm-', '').split('-');
+      const friendId = parts.find(id => id !== this.state.currentUser.id) || parts[0];
+      const friend = this.state.friends.find(f => f.id === friendId);
+      if (friend) {
+        return {
+          id: this.state.activeChannelId,
+          name: friend.name,
+          type: 'text',
+          topic: 'Direct Messages with ' + friend.name
+        };
+      }
+    }
+
     const guild = this.getCurrentGuild();
     if (!guild) return null;
     for (const cat of guild.categories) {

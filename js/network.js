@@ -242,6 +242,11 @@ class NetworkEngine {
     if (window.stateManager?.state?.isScreenSharing && window.voiceController?.screenStream) {
       window.voiceController.screenStream.getVideoTracks().forEach(t => combined.addTrack(t));
     }
+    
+    if (window.voiceController?.isCameraOn && window.voiceController?.cameraStream) {
+      window.voiceController.cameraStream.getVideoTracks().forEach(t => combined.addTrack(t));
+    }
+    
     return combined;
   }
 

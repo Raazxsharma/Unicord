@@ -669,6 +669,37 @@ class UIController {
       stage.appendChild(screenTile);
     }
 
+    // Local Camera Tile if active
+    if (window.voiceController?.isCameraOn && window.voiceController?.cameraStream) {
+      const camTile = document.createElement('div');
+      camTile.className = 'voice-screenshare-tile';
+      
+      const vid = document.createElement('video');
+      vid.style.width = '100%';
+      vid.style.height = '100%';
+      vid.style.objectFit = 'cover';
+      vid.style.backgroundColor = '#000';
+      vid.style.transform = 'scaleX(-1)'; // Mirror camera
+      vid.muted = true;
+      vid.autoplay = true;
+      vid.playsInline = true;
+      vid.srcObject = window.voiceController.cameraStream;
+      vid.onloadedmetadata = () => {
+        vid.play().catch(e => console.warn('Local camera video play error:', e));
+      };
+
+      const overlay = document.createElement('div');
+      overlay.className = 'screen-share-preview';
+      overlay.style.position = 'absolute';
+      overlay.style.bottom = '10px';
+      overlay.style.left = '10px';
+      overlay.innerHTML = `<div class="screen-share-title" style="background: rgba(0,0,0,0.6); padding: 4px 8px; border-radius: 4px;">Your Camera</div>`;
+      
+      camTile.appendChild(vid);
+      camTile.appendChild(overlay);
+      stage.appendChild(camTile);
+    }
+
     participants.forEach(p => {
       // Check if remote peer is sharing screen (has video track)
       if (p.remoteStream && p.remoteStream.getVideoTracks().length > 0) {

@@ -185,10 +185,11 @@ class UIController {
       homeBtn.classList.toggle('active', activeGuildId === 'home');
     }
 
-    window.stateManager.state.guilds.forEach(guild => {
+    window.stateManager.state.guilds.forEach((guild, index) => {
       const item = document.createElement('div');
       item.className = `guild-item ${activeGuildId === guild.id ? 'active' : ''} ${guild.unread ? 'unread' : ''}`;
       item.setAttribute('data-tooltip', guild.name);
+      item.draggable = true;
 
       item.innerHTML = `
         <div class="guild-pill"></div>
@@ -207,6 +208,49 @@ class UIController {
         }
         window.stateManager.saveState();
         this.renderAll();
+      };
+
+      // Drag and Drop Logic
+      item.ondragstart = (e) => {
+        e.dataTransfer.setData('text/plain', index);
+        item.style.opacity = '0.4';
+      };
+
+      item.ondragend = (e) => {
+        item.style.opacity = '1';
+        list.querySelectorAll('.guild-item').forEach(el => {
+          el.style.transform = 'translateY(0)';
+          el.style.borderTop = 'none';
+          el.style.borderBottom = 'none';
+        });
+      };
+
+      item.ondragover = (e) => {
+        e.preventDefault(); // allow drop
+      };
+
+      item.ondragenter = (e) => {
+        e.preventDefault();
+        item.style.transform = 'translateY(4px)';
+      };
+
+      item.ondragleave = (e) => {
+        item.style.transform = 'translateY(0)';
+      };
+
+      item.ondrop = (e) => {
+        e.preventDefault();
+        item.style.transform = 'translateY(0)';
+        const fromIndex = parseInt(e.dataTransfer.getData('text/plain'));
+        const toIndex = index;
+        
+        if (!isNaN(fromIndex) && fromIndex !== toIndex) {
+          const guilds = window.stateManager.state.guilds;
+          const movedItem = guilds.splice(fromIndex, 1)[0];
+          guilds.splice(toIndex, 0, movedItem);
+          window.stateManager.saveState();
+          this.renderGuilds();
+        }
       };
 
       list.appendChild(item);

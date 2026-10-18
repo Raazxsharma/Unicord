@@ -293,6 +293,11 @@
   color: #fff;
   background-size: cover;
   background-position: center;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex-shrink: 0;
+  box-sizing: border-box;
   transition: box-shadow var(--transition-fast);
 }
 

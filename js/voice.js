@@ -9,6 +9,8 @@ class VoiceController {
     this.cameraStream = null;
     this.screenStream = null;
     this.isCameraOn = false;
+    this.callTimerInterval = null;
+    this.callElapsedSeconds = 802; // Initial 13:22 to match realistic Google Meet session
     this.initAudioHooks();
   }
 
@@ -18,9 +20,35 @@ class VoiceController {
     };
   }
 
+  startCallTimer() {
+    this.stopCallTimer();
+    this.callTimerInterval = setInterval(() => {
+      this.callElapsedSeconds++;
+      const timerEl = document.getElementById('meet-live-timer');
+      if (timerEl) {
+        timerEl.textContent = this.getFormattedTime();
+      }
+    }, 1000);
+  }
+
+  stopCallTimer() {
+    if (this.callTimerInterval) {
+      clearInterval(this.callTimerInterval);
+      this.callTimerInterval = null;
+    }
+  }
+
+  getFormattedTime() {
+    const mins = Math.floor(this.callElapsedSeconds / 60);
+    const secs = this.callElapsedSeconds % 60;
+    return `${mins}:${secs < 10 ? '0' : ''}${secs}`;
+  }
+
   async joinVoice(channelId, channelName, guildName) {
     if (window.stateManager.state.activeVoiceChannelId === channelId) {
-      return; // Already in this channel
+      // Already in this channel, open stage view if requested
+      window.uiController.showMeetStage(true, channelName, guildName);
+      return;
     }
 
     // If currently in another voice channel, leave first
@@ -29,8 +57,10 @@ class VoiceController {
     }
 
     window.stateManager.state.activeVoiceChannelId = channelId;
+    window.stateManager.state.activeStageChannelId = channelId;
 
-    // Play Join chime
+    // Start timer & audio chime
+    this.startCallTimer();
     window.audioEngine.playJoinSound();
 
     // Start live microphone detection
@@ -51,7 +81,8 @@ class VoiceController {
         avatarBg: me.avatarBg,
         avatarPhoto: me.avatarPhoto || null,
         isSpeaking: false,
-        isMuted: window.stateManager.state.isMuted
+        isMuted: window.stateManager.state.isMuted,
+        isHandRaised: false
       });
     }
 
@@ -65,6 +96,7 @@ class VoiceController {
 
     window.stateManager.saveState();
     window.uiController.updateVoiceConnectionUI(true, channelName, guildName);
+    window.uiController.showMeetStage(true, channelName, guildName);
   }
 
   leaveVoice(playSound = true) {
@@ -74,6 +106,8 @@ class VoiceController {
     if (playSound) {
       window.audioEngine.playLeaveSound();
     }
+
+    this.stopCallTimer();
 
     // Broadcast voice leave to other real students
     if (window.networkEngine) {
@@ -97,10 +131,154 @@ class VoiceController {
     }
 
     window.stateManager.state.activeVoiceChannelId = null;
+    window.stateManager.state.activeStageChannelId = null;
     window.stateManager.state.isScreenSharing = false;
+    window.stateManager.state.isHandRaised = false;
     window.stateManager.saveState();
 
     window.uiController.updateVoiceConnectionUI(false);
+    window.uiController.showMeetStage(false);
+  }
+
+  toggleHandRaise() {
+    const isRaised = !window.stateManager.state.isHandRaised;
+    window.stateManager.state.isHandRaised = isRaised;
+
+    // Update in participant list
+    const chId = window.stateManager.state.activeVoiceChannelId;
+    if (chId && window.stateManager.state.voiceParticipants[chId]) {
+      const me = window.stateManager.state.voiceParticipants[chId].find(p => p.id === window.stateManager.state.currentUser.id);
+      if (me) me.isHandRaised = isRaised;
+    }
+
+    // Play pleasant notification sound
+    if (isRaised) {
+      if (window.audioEngine.playJoinSound) window.audioEngine.playJoinSound();
+      this.sendInCallMessage(`✋ ${window.stateManager.state.currentUser.name} raised hand`);
+    }
+
+    window.stateManager.saveState();
+    window.uiController.renderMeetStage();
+  }
+
+  sendReaction(emoji) {
+    window.uiController.spawnFloatingReaction(emoji);
+    
+    // Play light pop sound
+    if ('AudioContext' in window || 'webkitAudioContext' in window) {
+      try {
+        const ctx = new (window.AudioContext || window.webkitAudioContext)();
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(540, ctx.currentTime);
+        osc.frequency.exponentialRampToValueAtTime(880, ctx.currentTime + 0.12);
+        gain.gain.setValueAtTime(0.15, ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.12);
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start();
+        osc.stop(ctx.currentTime + 0.12);
+      } catch (e) {}
+    }
+
+    // Close reactions tray
+    const tray = document.getElementById('meet-reactions-tray');
+    if (tray) tray.style.display = 'none';
+
+    if (window.networkEngine) {
+      window.networkEngine.broadcastReaction?.(emoji);
+    }
+  }
+
+  toggleMeetViewMode(mode) {
+    window.stateManager.state.meetViewMode = mode;
+    window.stateManager.saveState();
+    window.uiController.renderMeetStage();
+  }
+
+  toggleInCallDrawer(tab) {
+    const current = window.stateManager.state.inCallDrawerOpen;
+    window.stateManager.state.inCallDrawerOpen = current === tab ? null : tab;
+    window.stateManager.saveState();
+    window.uiController.renderMeetStage();
+  }
+
+  zoomPresentationDoc(delta) {
+    let current = window.stateManager.state.docZoom || 100;
+    current = Math.min(160, Math.max(70, current + delta));
+    window.stateManager.state.docZoom = current;
+    window.stateManager.saveState();
+    
+    const paper = document.getElementById('meet-doc-paper');
+    const zoomLabel = document.getElementById('meet-doc-zoom-label');
+    if (paper) paper.style.transform = `scale(${current / 100})`;
+    if (zoomLabel) zoomLabel.textContent = `${current}%`;
+  }
+
+  toggleLaserPointer() {
+    this.isLaserActive = !this.isLaserActive;
+    window.uiController.renderMeetStage();
+  }
+
+  async togglePiP() {
+    try {
+      const vid = document.querySelector('.meet-video-screen');
+      if (vid) {
+        if (document.pictureInPictureElement) {
+          await document.exitPictureInPicture();
+        } else if (document.pictureInPictureEnabled) {
+          await vid.requestPictureInPicture();
+        }
+      }
+    } catch (e) {
+      console.warn('[UniCord PiP] Picture-in-picture error:', e);
+    }
+  }
+
+  toggleFitMode() {
+    const vid = document.querySelector('.meet-video-screen');
+    if (!vid) return;
+    const current = vid.style.objectFit || 'contain';
+    vid.style.objectFit = current === 'contain' ? 'cover' : 'contain';
+    const label = document.getElementById('screenshare-fit-label');
+    if (label) label.textContent = vid.style.objectFit === 'cover' ? 'Fill' : 'Fit';
+  }
+
+  sendInCallMessage(text) {
+    if (!text || !text.trim()) return;
+    const msg = {
+      id: 'im-' + Date.now(),
+      author: window.stateManager.state.currentUser.name,
+      time: this.getFormattedTime(),
+      text: text.trim()
+    };
+    if (!window.stateManager.state.inCallMessages) {
+      window.stateManager.state.inCallMessages = [];
+    }
+    window.stateManager.state.inCallMessages.push(msg);
+    window.stateManager.saveState();
+    window.uiController.renderMeetStage();
+
+    // Auto response from Sourabh Singh or classmates if a question is asked
+    if (text.includes('?') || text.toLowerCase().includes('sir')) {
+      setTimeout(() => {
+        const answers = [
+          "Good question! As highlighted on page 9, consent management architecture is decentralized.",
+          "Check the second paragraph under API Architecture, it mentions third-party aggregator tokens.",
+          "Exactly right. We will explore Fraud and Regulations in the next slide."
+        ];
+        const ans = answers[Math.floor(Math.random() * answers.length)];
+        window.stateManager.state.inCallMessages.push({
+          id: 'im-reply-' + Date.now(),
+          author: 'Sourabh Singh',
+          time: this.getFormattedTime(),
+          text: ans
+        });
+        window.stateManager.saveState();
+        window.uiController.renderMeetStage();
+      }, 2200);
+    }
   }
 
   toggleMute() {
@@ -325,13 +503,21 @@ class VoiceController {
     if ('speechSynthesis' in window) {
       window.speechSynthesis.cancel(); // Stop any pending speech
 
-      const phrases = [
+      let phrases = [
         "Hey! Can you hear me clearly in this voice channel?",
         "Yeah, my microphone is working! The voice quality sounds great.",
-        "Hey Alex! I'm here in the channel, what are we working on?",
         "Testing, one two three. Can everyone in the voice room hear this?",
         "Audio is crystal clear on my end too!"
       ];
+      if (speaker.name === 'Sourabh Singh' || speaker.isPresenter) {
+        phrases = [
+          "As shown on page 9, API consent architecture protects sensitive banking credentials.",
+          "An API connects two independent systems in a structured and audited way.",
+          "Next up in Fintech Ecosystem: Risk, Fraud and Regulation framework.",
+          "Can everyone see the Fintech presentation notes on screen?",
+          "Notice how third-party apps only receive authorized token data, never raw passwords."
+        ];
+      }
       const phrase = phrases[Math.floor(Math.random() * phrases.length)];
       const utter = new SpeechSynthesisUtterance(phrase);
 

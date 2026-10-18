@@ -39,6 +39,21 @@ class UIController {
     if (modal) modal.style.display = 'none';
   }
 
+  getSafeAvatarInitials(user) {
+    if (!user) return '?';
+    if (user.shortInitials) return user.shortInitials;
+    if (user.isOthersTile) return '+29';
+    if (user.avatarText && user.avatarText.length <= 2 && !user.avatarText.startsWith('#')) {
+      return user.avatarText;
+    }
+    const cleanName = (user.name || '').replace(/\(You\)/g, '').trim();
+    const parts = cleanName.split(/\s+/);
+    if (parts.length >= 2) {
+      return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+    }
+    return cleanName.substring(0, 2).toUpperCase() || 'U';
+  }
+
   // ================= 1-ON-1 DIRECT CALLING =================
   startDirectCall(friendId, friendName, avatarText, avatarBg, isVideo = false) {
     this.activeCallFriend = { id: friendId, name: friendName, avatarText, avatarBg, isVideo };
@@ -385,7 +400,7 @@ class UIController {
               const avatarStyle = hasPhoto
                 ? `background-image: url('${p.avatarPhoto}'); background-size: cover; background-position: center; border: none;`
                 : `background-color: ${p.avatarBg || '#5865F2'};`;
-              const avatarContent = hasPhoto ? '' : (p.avatarText || p.name.charAt(0));
+              const avatarContent = hasPhoto ? '' : this.getSafeAvatarInitials(p);
 
               vRow.innerHTML = `
                 <div class="voice-member-avatar ${p.isSpeaking ? 'speaking' : ''}" style="${avatarStyle}">
@@ -867,6 +882,601 @@ class UIController {
     });
   }
 
+  // 7B. Render Google Meet & Conference Stage Viewport
+  showMeetStage(show, channelName = '', guildName = '') {
+    const stageViewport = document.getElementById('meet-stage-viewport');
+    const chatViewport = document.getElementById('chat-viewport');
+    const friendsViewport = document.getElementById('friends-viewport');
+    const membersSidebar = document.getElementById('members-sidebar');
+    const btnNavStage = document.getElementById('btn-toggle-meet-stage');
+    const miniDock = document.getElementById('meet-mini-dock');
+
+    if (!stageViewport) return;
+
+    if (show) {
+      stageViewport.style.display = 'flex';
+      if (chatViewport) chatViewport.style.display = 'none';
+      if (friendsViewport) friendsViewport.style.display = 'none';
+      if (membersSidebar) membersSidebar.style.display = 'none';
+      if (btnNavStage) btnNavStage.classList.add('active');
+      if (miniDock) miniDock.style.display = 'none';
+
+      const titleEl = document.getElementById('meet-room-title');
+      if (titleEl) {
+        titleEl.textContent = channelName || '24/7 Study Room';
+      }
+      this.renderMeetStage();
+    } else {
+      stageViewport.style.display = 'none';
+      if (chatViewport) chatViewport.style.display = 'flex';
+      if (membersSidebar) membersSidebar.style.display = 'flex';
+      if (btnNavStage) btnNavStage.classList.remove('active');
+
+      // If still connected to voice, show mini dock so user knows call is active
+      const inVoice = !!window.stateManager.state.activeVoiceChannelId;
+      if (miniDock) {
+        miniDock.style.display = inVoice ? 'flex' : 'none';
+        const miniText = document.getElementById('meet-mini-channel-text');
+        if (miniText && inVoice) {
+          miniText.textContent = `Connected: ${channelName || '24/7 Study Room'} (Sourabh Singh presenting)`;
+        }
+      }
+    }
+  }
+
+  toggleMeetStageView() {
+    const stageViewport = document.getElementById('meet-stage-viewport');
+    const inVoice = !!window.stateManager.state.activeVoiceChannelId;
+    if (inVoice) {
+      const isVisible = stageViewport && stageViewport.style.display === 'flex';
+      this.showMeetStage(!isVisible);
+    } else {
+      // Auto-join 24/7 study room
+      window.voiceController.joinVoice('chan-voice-study', '24/7 Study Room', 'Apex University Hub');
+    }
+  }
+
+  spawnFloatingReaction(emoji) {
+    const container = document.getElementById('meet-reactions-overlay');
+    if (!container) return;
+    const item = document.createElement('div');
+    item.className = 'floating-reaction-item';
+    item.textContent = emoji;
+    const startLeft = 32 + Math.random() * 36; // 32% - 68%
+    item.style.left = startLeft + '%';
+    container.appendChild(item);
+    setTimeout(() => {
+      item.remove();
+    }, 3200);
+  }
+
+  initLaserPointerCanvas(canvas, container) {
+    if (!canvas || !container) return;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    const resize = () => {
+      canvas.width = container.clientWidth || 800;
+      canvas.height = container.clientHeight || 600;
+    };
+    resize();
+
+    let points = [];
+
+    const onMouseMove = (e) => {
+      const rect = container.getBoundingClientRect();
+      const x = e.clientX - rect.left;
+      const y = e.clientY - rect.top;
+      points.push({ x, y, time: Date.now() });
+      if (points.length > 30) points.shift();
+    };
+
+    container.onmousemove = onMouseMove;
+
+    const render = () => {
+      if (!window.voiceController?.isLaserActive || !document.contains(canvas)) {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        return;
+      }
+
+      const now = Date.now();
+      points = points.filter(p => now - p.time < 600);
+
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      if (points.length > 1) {
+        ctx.save();
+        for (let i = 1; i < points.length; i++) {
+          const p1 = points[i - 1];
+          const p2 = points[i];
+          const age = now - p2.time;
+          const alpha = Math.max(0, 1 - age / 600);
+
+          ctx.beginPath();
+          ctx.moveTo(p1.x, p1.y);
+          ctx.lineTo(p2.x, p2.y);
+          ctx.strokeStyle = `rgba(255, 59, 48, ${alpha * 0.85})`;
+          ctx.lineWidth = 4 * alpha;
+          ctx.lineCap = 'round';
+          ctx.stroke();
+        }
+        ctx.restore();
+      }
+
+      if (points.length > 0) {
+        const last = points[points.length - 1];
+        ctx.save();
+        // Laser outer glowing aura
+        const gradient = ctx.createRadialGradient(last.x, last.y, 0, last.x, last.y, 16);
+        gradient.addColorStop(0, 'rgba(255, 68, 68, 0.95)');
+        gradient.addColorStop(0.35, 'rgba(255, 20, 40, 0.55)');
+        gradient.addColorStop(1, 'rgba(255, 0, 0, 0)');
+        ctx.fillStyle = gradient;
+        ctx.beginPath();
+        ctx.arc(last.x, last.y, 16, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Laser core white-hot dot
+        ctx.fillStyle = '#ffffff';
+        ctx.beginPath();
+        ctx.arc(last.x, last.y, 3.5, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+      }
+
+      requestAnimationFrame(render);
+    };
+
+    requestAnimationFrame(render);
+  }
+
+  renderMeetStage() {
+    const stageViewport = document.getElementById('meet-stage-viewport');
+    const body = document.getElementById('meet-stage-body');
+    const chId = window.stateManager.state.activeVoiceChannelId;
+    if (!stageViewport || !body || !chId) return;
+
+    const state = window.stateManager.state;
+    const participants = state.voiceParticipants[chId] || [];
+    const isScreenSharing = state.isScreenSharing;
+    const isMuted = state.isMuted;
+    const isCameraOn = window.voiceController?.isCameraOn;
+    const isHandRaised = state.isHandRaised;
+    const mode = state.meetViewMode || 'spotlight';
+
+    // 1. Update Header Buttons
+    const btnSpotlight = document.getElementById('btn-meet-mode-spotlight');
+    const btnGrid = document.getElementById('btn-meet-mode-grid');
+    if (btnSpotlight) btnSpotlight.classList.toggle('active', mode === 'spotlight');
+    if (btnGrid) btnGrid.classList.toggle('active', mode === 'grid');
+
+    // 2. Update Dock Controls
+    const dockMic = document.getElementById('btn-dock-mic');
+    if (dockMic) {
+      dockMic.classList.toggle('muted', isMuted);
+      const onIcon = dockMic.querySelector('.dock-mic-on');
+      const offIcon = dockMic.querySelector('.dock-mic-off');
+      if (onIcon) onIcon.style.display = isMuted ? 'none' : 'block';
+      if (offIcon) offIcon.style.display = isMuted ? 'block' : 'none';
+    }
+
+    const dockCam = document.getElementById('btn-dock-camera');
+    if (dockCam) {
+      dockCam.classList.toggle('active-blue', isCameraOn);
+    }
+
+    const dockScreen = document.getElementById('btn-dock-screenshare');
+    if (dockScreen) {
+      dockScreen.classList.toggle('active-blue', isScreenSharing);
+    }
+
+    const dockHand = document.getElementById('btn-dock-raise-hand');
+    if (dockHand) {
+      dockHand.classList.toggle('hand-raised', isHandRaised);
+    }
+
+    const dockPeopleBadge = document.getElementById('meet-dock-people-badge');
+    if (dockPeopleBadge) {
+      dockPeopleBadge.textContent = '34';
+    }
+
+    body.innerHTML = '';
+
+    // 3. Render Based on View Mode
+    if (mode === 'grid') {
+      // Gallery / Grid Mode
+      const gridContainer = document.createElement('div');
+      gridContainer.className = 'meet-grid-view';
+
+      participants.forEach(p => {
+        if (p.isOthersTile) {
+          const othersTile = document.createElement('div');
+          othersTile.className = 'meet-tile-others';
+          othersTile.onclick = () => window.voiceController.toggleInCallDrawer('people');
+          othersTile.innerHTML = `
+            <div class="meet-avatar-stack">
+              <div class="meet-avatar-stack-item" style="background:#f0b232;">AK</div>
+              <div class="meet-avatar-stack-item" style="background:#5865f2;">SM</div>
+              <div class="meet-avatar-stack-item" style="background:#23a55a;">${p.count || 29}</div>
+            </div>
+            <div class="meet-others-label">${p.name || '29 others'}</div>
+          `;
+          gridContainer.appendChild(othersTile);
+          return;
+        }
+
+        const tile = document.createElement('div');
+        tile.className = `meet-tile ${p.isSpeaking ? 'speaking' : ''}`;
+        tile.id = `meet-tile-${p.id}`;
+
+        const hasPhoto = !!p.avatarPhoto;
+        const avatarStyle = hasPhoto
+          ? `background-image: url('${p.avatarPhoto}');`
+          : `background-color: ${p.avatarBg || '#5865F2'};`;
+        const avatarText = hasPhoto ? '' : (p.avatarText || p.name.charAt(0));
+
+        tile.innerHTML = `
+          <div class="meet-tile-avatar" style="${avatarStyle}">
+            ${avatarText}
+          </div>
+          <div class="meet-tile-name-pill">
+            ${p.isPresenter ? '📌' : ''} ${p.name}
+          </div>
+          <div class="meet-tile-mic-badge ${p.isMuted ? 'muted' : ''}">
+            ${p.isMuted 
+              ? '<svg viewBox="0 0 24 24" width="12" height="12"><path fill="#ffffff" d="M19 11h-1.7c0 .74-.16 1.43-.43 2.05l1.23 1.23c.56-.98.9-2.09.9-3.28zm-4.02.17c0-.06.02-.11.02-.17V5c0-1.66-1.34-3-3-3S9 3.34 9 5v.18l5.98 5.99zM4.27 3L3 4.27l6.01 6.01V11c0 1.66 1.33 3 2.99 3 .22 0 .44-.03.65-.08l1.66 1.66c-.71.33-1.5.52-2.31.52-2.76 0-5.3-2.24-5.3-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c1.33-.19 2.53-.74 3.53-1.54l3.2 3.2L21 18.27 4.27 3z"/></svg>' 
+              : '<svg viewBox="0 0 24 24" width="12" height="12"><path fill="#23a55a" d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z"/></svg>'}
+          </div>
+          ${p.isHandRaised ? '<div class="meet-hand-raised-badge">✋</div>' : ''}
+        `;
+        tile.onclick = (e) => this.openMemberProfilePopover(p, e);
+        gridContainer.appendChild(tile);
+      });
+
+      body.appendChild(gridContainer);
+    } else {
+      // Spotlight Mode (Google Meet Presentation Layout as in user screenshot)
+      
+      // A. Main Spotlight Area (Left)
+      const spotlight = document.createElement('div');
+      spotlight.className = 'meet-spotlight-area';
+
+      // Top Presentation Bar (Google Docs / Meet Shell)
+      const banner = document.createElement('div');
+      banner.className = 'meet-presentation-banner';
+      banner.innerHTML = `
+        <div class="meet-banner-top-row">
+          <div class="meet-presenter-badge">
+            <div class="meet-presenter-avatar-small">#चौ</div>
+            <div class="meet-presenter-label">Sourabh Singh <span class="meet-presenting-subtag">(Presenting)</span></div>
+            <svg viewBox="0 0 24 24" width="16" height="16" style="color:#bdc1c6; margin-left:4px;"><path fill="currentColor" d="M16 12V4h1V2H7v2h1v8l-2 2v2h5.2v6h1.6v-6H18v-2l-2-2z"/></svg>
+          </div>
+
+          <div style="display:flex; align-items:center; gap:8px;">
+            <button class="meet-view-switch-btn ${!isScreenSharing ? 'active' : ''}" onclick="window.voiceController.stopScreenShare()" style="padding:3px 10px; font-size:11px;">
+              📄 Notes.docx
+            </button>
+            <button class="meet-view-switch-btn ${isScreenSharing ? 'active' : ''}" onclick="window.voiceController.toggleScreenShare()" style="padding:3px 10px; font-size:11px;">
+              🖥️ Screen Share
+            </button>
+            <button class="meet-view-switch-btn" onclick="window.whiteboardController?.openModal()" style="padding:3px 10px; font-size:11px;">
+              🎨 Whiteboard
+            </button>
+          </div>
+        </div>
+
+        <div class="meet-doc-shell-menubar">
+          <div class="meet-doc-title-group">
+            <div class="meet-doc-icon">
+              <svg viewBox="0 0 24 24" width="18" height="18"><path fill="#4285f4" d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6zm-1 7V3.5L18.5 9H13z"/></svg>
+            </div>
+            <div class="meet-doc-title-text">Fintech Ecosystem Notes.docx</div>
+            <div class="meet-doc-menu-list">
+              <span class="meet-doc-menu-item">File</span>
+              <span class="meet-doc-menu-item">Edit</span>
+              <span class="meet-doc-menu-item">View</span>
+              <span class="meet-doc-menu-item">Tools</span>
+              <span class="meet-doc-menu-item">Help</span>
+            </div>
+          </div>
+
+          <div class="meet-doc-tools-right">
+            <button class="meet-open-docs-btn" onclick="window.open('https://docs.google.com', '_blank')">
+              <svg viewBox="0 0 24 24" width="14" height="14"><path fill="#1a73e8" d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6zm-1 7V3.5L18.5 9H13z"/></svg>
+              <span>Open with Google Docs ▾</span>
+            </button>
+            <div class="nav-divider" style="height:14px; margin:0 4px;"></div>
+            <span class="meet-doc-page-badge">Page 9 / 18</span>
+            <button class="meet-doc-tool-btn" onclick="window.voiceController.zoomPresentationDoc(-10)" title="Zoom Out">-</button>
+            <span style="font-size:12px; color:#bdc1c6; font-family:var(--font-code);" id="meet-doc-zoom-label">${state.docZoom || 100}%</span>
+            <button class="meet-doc-tool-btn" onclick="window.voiceController.zoomPresentationDoc(10)" title="Zoom In">+</button>
+            <button class="meet-doc-tool-btn meet-laser-toggle-btn ${window.voiceController?.isLaserActive ? 'active' : ''}" onclick="window.voiceController.toggleLaserPointer()" title="Interactive Laser Pointer">
+              🎯
+            </button>
+          </div>
+        </div>
+      `;
+      spotlight.appendChild(banner);
+
+      // Presentation Viewport (Doc or Video)
+      const viewport = document.createElement('div');
+      viewport.className = 'meet-presentation-viewport';
+
+      // Laser Pointer Canvas Overlay
+      const laserCanvas = document.createElement('canvas');
+      laserCanvas.className = 'meet-laser-canvas';
+      laserCanvas.id = 'meet-laser-canvas';
+      viewport.appendChild(laserCanvas);
+
+      if (isScreenSharing && window.voiceController?.screenStream) {
+        // High-Tech Screenshare HUD Overlay
+        const hud = document.createElement('div');
+        hud.className = 'screenshare-hud-overlay';
+        hud.innerHTML = `
+          <div class="screenshare-telemetry-pill">
+            <div class="screenshare-live-pulse"></div>
+            <span>LIVE SCREENSHARE • 1080p @ 60 FPS • WebRTC HD • 4.8 Mbps</span>
+          </div>
+          <div class="screenshare-hud-buttons">
+            <button class="screenshare-pill-btn ${window.voiceController?.isLaserActive ? 'active' : ''}" onclick="window.voiceController.toggleLaserPointer()">
+              🎯 Laser Pointer
+            </button>
+            <button class="screenshare-pill-btn" onclick="window.voiceController.togglePiP()">
+              🪟 Picture-in-Picture
+            </button>
+            <button class="screenshare-pill-btn" onclick="window.voiceController.toggleFitMode()" id="screenshare-fit-label">
+              Fit
+            </button>
+            <button class="screenshare-pill-btn danger" onclick="window.voiceController.stopScreenShare()">
+              ⏹ Stop Sharing
+            </button>
+          </div>
+        `;
+        viewport.appendChild(hud);
+
+        const vid = document.createElement('video');
+        vid.className = 'meet-video-screen';
+        vid.muted = true;
+        vid.autoplay = true;
+        vid.playsInline = true;
+        vid.srcObject = window.voiceController.screenStream;
+        vid.onloadedmetadata = () => vid.play().catch(e => console.warn(e));
+        viewport.appendChild(vid);
+      } else {
+        // Document Paper View (Matching screenshot)
+        const paper = document.createElement('div');
+        paper.className = 'meet-doc-paper';
+        paper.id = 'meet-doc-paper';
+        paper.style.transform = `scale(${(state.docZoom || 100) / 100})`;
+        paper.innerHTML = `
+          <p style="color:#5f6368; font-size:13px; margin-bottom:14px; font-style:italic;">
+            ...exactly the practical skill this unit is building toward, because it is precisely what a real analyst does before recommending that a company either partner with, or instead compete directly against, any given FinTech player in the market
+          </p>
+
+          <h3 style="font-size:18px; font-weight:700; color:#1a73e8; margin-top:16px; margin-bottom:10px;">
+            API and Consent Architecture
+          </h3>
+          <p>
+            An API, or Application Programming Interface, is simply a technical connection that lets two separate pieces of software talk to each other and exchange data in a structured, secure, and clearly defined way, and in FinTech specifically, APIs are what allow one company's app to securely pull your financial data from an entirely different institution, such as your bank, without ever exposing your actual login credentials to that second company directly.
+          </p>
+          <p>
+            Consent architecture is the closely related layer of systems and permissions that specifically ensures this kind of sensitive data-sharing only ever happens with your own explicit, informed permission, and that you retain the ability to see exactly what data is being shared, with which specific companies, and to revoke that permission again at any time you choose to.
+          </p>
+          <div class="highlight-box">
+            <strong>Key Mechanism:</strong> When a budgeting app shows you a combined, consolidated view of transactions from three or four completely different bank accounts you personally hold, all in one single screen, that convenience is only possible because of exactly this API and consent architecture working correctly and securely together behind the scenes.
+          </div>
+
+          <h3 style="font-size:18px; font-weight:700; color:#202124; margin-top:34px; margin-bottom:10px;">
+            Day 6: Risk, Fraud and Regulation in FinTech
+          </h3>
+          <p>
+            Today explains why a genuinely great FinTech idea can still fail completely without the right risk architecture and regulatory frameworks in place. Digital payments, tokenization, and customer authorization protocols rely heavily on audited data pipelines to prevent identity takeover and synthetic fraud.
+          </p>
+        `;
+        viewport.appendChild(paper);
+
+        // Floating Bottom-Right Inspection Capsule (Google Docs Style)
+        const capsule = document.createElement('div');
+        capsule.className = 'meet-doc-floating-capsule';
+        capsule.innerHTML = `
+          <button class="meet-doc-tool-btn" onclick="window.voiceController.zoomPresentationDoc(-10)" title="Zoom Out">🔍 -</button>
+          <span style="font-size:12px; font-family:var(--font-code); color:#e8eaed;">${state.docZoom || 100}%</span>
+          <button class="meet-doc-tool-btn" onclick="window.voiceController.zoomPresentationDoc(10)" title="Zoom In">🔍 +</button>
+          <div class="nav-divider" style="height:12px;"></div>
+          <button class="meet-doc-tool-btn" onclick="window.print()" title="Print Notes">🖨️</button>
+          <button class="meet-doc-tool-btn" onclick="document.getElementById('meet-stage-viewport')?.requestFullscreen?.()" title="Full Screen">⛶</button>
+        `;
+        viewport.appendChild(capsule);
+      }
+
+      // Attach laser pointer interactive trail
+      if (window.voiceController?.isLaserActive) {
+        viewport.classList.add('meet-laser-active-cursor');
+        this.initLaserPointerCanvas(laserCanvas, viewport);
+      } else {
+        viewport.classList.remove('meet-laser-active-cursor');
+      }
+
+      spotlight.appendChild(viewport);
+      body.appendChild(spotlight);
+
+      // B. Right Participants Sidebar
+      const sidebar = document.createElement('div');
+      sidebar.className = 'meet-participants-sidebar';
+
+      // 1. Top Presenter Card
+      const presenter = participants.find(p => p.name === 'Sourabh Singh' || p.isPresenter) || {
+        id: 'p-sourabh',
+        name: 'Sourabh Singh',
+        avatarText: 'SS',
+        shortInitials: 'SS',
+        handle: '#चौधरी',
+        avatarBg: '#3c4043',
+        isSpeaking: true,
+        isMuted: false
+      };
+
+      const presenterCard = document.createElement('div');
+      presenterCard.className = `meet-presenter-card ${presenter.isSpeaking ? 'speaking' : ''}`;
+      presenterCard.id = `meet-tile-${presenter.id}`;
+      presenterCard.innerHTML = `
+        <div class="meet-audio-wave">
+          <div class="wave-bar"></div>
+          <div class="wave-bar"></div>
+          <div class="wave-bar"></div>
+        </div>
+        <div class="meet-presenter-avatar-large">
+          ${this.getSafeAvatarInitials(presenter)}
+        </div>
+        <div class="meet-tile-name-pill">
+          📌 ${presenter.name} ${presenter.handle || ''}
+        </div>
+      `;
+      presenterCard.onclick = (e) => this.openMemberProfilePopover(presenter, e);
+      sidebar.appendChild(presenterCard);
+
+      // 2. Bottom 2x2 Grid
+      const grid = document.createElement('div');
+      grid.className = 'meet-participants-grid';
+
+      // Other participants except presenter
+      const others = participants.filter(p => p.id !== presenter.id);
+
+      others.forEach(p => {
+        if (p.isOthersTile) {
+          const othersTile = document.createElement('div');
+          othersTile.className = 'meet-tile-others';
+          othersTile.onclick = () => window.voiceController.toggleInCallDrawer('people');
+          othersTile.innerHTML = `
+            <div class="meet-avatar-stack">
+              <div class="meet-avatar-stack-item" style="background:#1f3a60;">RJ</div>
+              <div class="meet-avatar-stack-item" style="background:#234938;">AG</div>
+              <div class="meet-avatar-stack-item" style="background:#543b18;">RH</div>
+            </div>
+            <div class="meet-others-label">${p.name || '29 others'}</div>
+          `;
+          grid.appendChild(othersTile);
+          return;
+        }
+
+        const tile = document.createElement('div');
+        tile.className = `meet-tile ${p.isSpeaking ? 'speaking' : ''}`;
+        tile.id = `meet-tile-${p.id}`;
+
+        const hasPhoto = !!p.avatarPhoto;
+        const avatarStyle = hasPhoto
+          ? `background-image: url('${p.avatarPhoto}');`
+          : `background-color: ${p.avatarBg || '#5865F2'};`;
+        const avatarText = hasPhoto ? '' : this.getSafeAvatarInitials(p);
+
+        tile.innerHTML = `
+          <div class="meet-tile-avatar" style="${avatarStyle}">
+            ${avatarText}
+          </div>
+          <div class="meet-tile-name-pill">
+            ${p.name}
+          </div>
+          <div class="meet-tile-mic-badge ${p.isMuted ? 'muted' : ''}">
+            ${p.isMuted 
+              ? '<svg viewBox="0 0 24 24" width="12" height="12"><path fill="#ffffff" d="M19 11h-1.7c0 .74-.16 1.43-.43 2.05l1.23 1.23c.56-.98.9-2.09.9-3.28zm-4.02.17c0-.06.02-.11.02-.17V5c0-1.66-1.34-3-3-3S9 3.34 9 5v.18l5.98 5.99zM4.27 3L3 4.27l6.01 6.01V11c0 1.66 1.33 3 2.99 3 .22 0 .44-.03.65-.08l1.66 1.66c-.71.33-1.5.52-2.31.52-2.76 0-5.3-2.24-5.3-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c1.33-.19 2.53-.74 3.53-1.54l3.2 3.2L21 18.27 4.27 3z"/></svg>' 
+              : '<svg viewBox="0 0 24 24" width="12" height="12"><path fill="#23a55a" d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z"/></svg>'}
+          </div>
+          ${p.isHandRaised ? '<div class="meet-hand-raised-badge">✋</div>' : ''}
+        `;
+        tile.onclick = (e) => this.openMemberProfilePopover(p, e);
+        grid.appendChild(tile);
+      });
+
+      sidebar.appendChild(grid);
+      body.appendChild(sidebar);
+    }
+
+    // 4. In-Call Drawer Rendering
+    const drawer = document.getElementById('meet-side-drawer');
+    const drawerBody = document.getElementById('meet-drawer-body');
+    const drawerFooter = document.getElementById('meet-drawer-footer');
+    const tabChat = document.getElementById('tab-in-call-chat');
+    const tabPeople = document.getElementById('tab-in-call-people');
+
+    if (drawer && drawerBody) {
+      if (state.inCallDrawerOpen) {
+        drawer.style.display = 'flex';
+        const activeTab = state.inCallDrawerOpen;
+
+        if (tabChat) tabChat.classList.toggle('active', activeTab === 'chat');
+        if (tabPeople) tabPeople.classList.toggle('active', activeTab === 'people');
+
+        if (activeTab === 'chat') {
+          if (drawerFooter) drawerFooter.style.display = 'block';
+          drawerBody.innerHTML = '';
+          const msgs = state.inCallMessages || [];
+          msgs.forEach(m => {
+            const row = document.createElement('div');
+            row.className = 'meet-in-call-msg';
+            row.innerHTML = `
+              <div class="meet-in-call-author">
+                <span>${m.author}</span>
+                <span class="meet-in-call-time">${m.time}</span>
+              </div>
+              <div class="meet-in-call-text">${m.text}</div>
+            `;
+            drawerBody.appendChild(row);
+          });
+          drawerBody.scrollTop = drawerBody.scrollHeight;
+        } else if (activeTab === 'people') {
+          if (drawerFooter) drawerFooter.style.display = 'none';
+          drawerBody.innerHTML = `
+            <div style="font-size:12px; font-weight:700; color:#8ab4f8; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:8px;">
+              Meeting Participants (34)
+            </div>
+          `;
+
+          // Hand Raise Queue if any
+          const raised = participants.filter(p => p.isHandRaised);
+          if (raised.length > 0) {
+            const queueBox = document.createElement('div');
+            queueBox.style.background = 'rgba(251,188,4,0.12)';
+            queueBox.style.border = '1px solid rgba(251,188,4,0.3)';
+            queueBox.style.padding = '10px 12px';
+            queueBox.style.borderRadius = '8px';
+            queueBox.style.marginBottom = '12px';
+            queueBox.innerHTML = `
+              <div style="font-size:12px; font-weight:bold; color:#fbbc04; margin-bottom:6px;">✋ Hand Raised Queue (${raised.length})</div>
+              ${raised.map(r => `<div style="font-size:13px; color:#fff; display:flex; align-items:center; justify-content:space-between;"><span>${r.name}</span> <button onclick="window.voiceController.toggleHandRaise()" style="background:transparent; border:1px solid #fbbc04; color:#fbbc04; font-size:10px; border-radius:10px; padding:2px 6px; cursor:pointer;">Lower</button></div>`).join('')}
+            `;
+            drawerBody.appendChild(queueBox);
+          }
+
+          // Full Attendance List
+          participants.forEach(p => {
+            if (p.isOthersTile) return;
+            const pRow = document.createElement('div');
+            pRow.style.display = 'flex';
+            pRow.style.alignItems = 'center';
+            pRow.style.justifyContent = 'space-between';
+            pRow.style.padding = '8px 10px';
+            pRow.style.borderRadius = '8px';
+            pRow.style.background = 'rgba(255,255,255,0.03)';
+            pRow.innerHTML = `
+              <div style="display:flex; align-items:center; gap:8px;">
+                <div style="width:28px; height:28px; border-radius:50%; background:${p.avatarBg || '#5865F2'}; color:#fff; display:flex; align-items:center; justify-content:center; font-size:12px; font-weight:bold;">
+                  ${p.avatarText || p.name.charAt(0)}
+                </div>
+                <span style="font-size:13px; font-weight:600; color:#e8eaed;">${p.name} ${p.isPresenter ? '<span style="color:#8ab4f8; font-size:11px;">(Host)</span>' : ''}</span>
+              </div>
+              <span style="font-size:11px; color:${p.isMuted ? '#ea4335' : '#23a55a'}; font-weight:600;">
+                ${p.isMuted ? 'Muted' : 'Speaking'}
+              </span>
+            `;
+            drawerBody.appendChild(pRow);
+          });
+        }
+      } else {
+        drawer.style.display = 'none';
+      }
+    }
+  }
+
   // 8. Render Friends Tab
   renderFriends() {
     const list = document.getElementById('friends-cards-list');
@@ -1017,6 +1627,15 @@ class UIController {
         if (tag) tag.innerText = 'Connected';
       }
     }
+
+    const meetTile = document.getElementById('meet-tile-' + userId);
+    if (meetTile) {
+      if (isSpeaking) {
+        meetTile.classList.add('speaking');
+      } else {
+        meetTile.classList.remove('speaking');
+      }
+    }
   }
 
   updateVoiceCardMuteState(userId, isMuted) {
@@ -1145,7 +1764,10 @@ class UIController {
       } else {
         avatarEl.style.backgroundImage = 'none';
         avatarEl.style.backgroundColor = member.avatarBg || '#5865F2';
-        avatarEl.textContent = member.avatarText || member.name.substring(0, 2).toUpperCase();
+        const safeText = this.getSafeAvatarInitials(member);
+        avatarEl.textContent = safeText;
+        avatarEl.style.fontSize = safeText.length > 2 ? '18px' : '28px';
+        avatarEl.style.overflow = 'hidden';
       }
     }
 
@@ -1159,7 +1781,8 @@ class UIController {
     const usernameEl = document.getElementById('popover-username');
     const discEl = document.getElementById('popover-discriminator');
     if (usernameEl) usernameEl.textContent = member.name.replace(' (You)', '');
-    if (discEl) discEl.textContent = member.discriminator ? `#${member.discriminator}` : '#UniCord';
+    const handleTag = member.handle ? ` ${member.handle}` : (member.discriminator ? `#${member.discriminator}` : '#UniCord');
+    if (discEl) discEl.textContent = handleTag;
 
     // 5. Custom Status
     const customStatusEl = document.getElementById('popover-custom-status');
@@ -1190,6 +1813,28 @@ class UIController {
     // 8. Action button
     const btnDm = document.getElementById('popover-btn-dm');
     if (btnDm) {
+      // Remove any previously added stage join button
+      const oldStageBtn = document.getElementById('popover-btn-stage-join');
+      if (oldStageBtn) oldStageBtn.remove();
+
+      // Add prominent "Watch Stream / Join Voice Stage" button
+      const btnStage = document.createElement('button');
+      btnStage.id = 'popover-btn-stage-join';
+      btnStage.className = 'btn-primary';
+      btnStage.style.width = '100%';
+      btnStage.style.marginBottom = '8px';
+      btnStage.style.backgroundColor = '#23a55a';
+      btnStage.style.display = 'flex';
+      btnStage.style.alignItems = 'center';
+      btnStage.style.justifyContent = 'center';
+      btnStage.style.gap = '6px';
+      btnStage.innerHTML = `<span>📺 Join Stage & Watch Presentation</span>`;
+      btnStage.onclick = () => {
+        pop.style.display = 'none';
+        window.voiceController.joinVoice('chan-voice-lounge', 'Lounge (General)', 'Unicord Central');
+      };
+      btnDm.parentNode.insertBefore(btnStage, btnDm);
+
       const isSelf = member.id === window.stateManager.state.currentUser.id || member.name.includes('(You)');
       if (isSelf) {
         btnDm.textContent = '✏️ Edit Profile';

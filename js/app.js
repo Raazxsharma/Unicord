@@ -333,6 +333,113 @@ document.addEventListener('DOMContentLoaded', () => {
     sliderLofiVol.oninput = (e) => window.audioEngine.setLofiVolume(parseInt(e.target.value, 10) / 100);
   }
 
+  // 4B. Google Meet & Conference Stage Event Listeners
+  const btnToggleMeetStage = document.getElementById('btn-toggle-meet-stage');
+  if (btnToggleMeetStage) {
+    btnToggleMeetStage.onclick = () => window.uiController.toggleMeetStageView();
+  }
+
+  const btnMeetModeSpotlight = document.getElementById('btn-meet-mode-spotlight');
+  if (btnMeetModeSpotlight) {
+    btnMeetModeSpotlight.onclick = () => window.voiceController.toggleMeetViewMode('spotlight');
+  }
+
+  const btnMeetModeGrid = document.getElementById('btn-meet-mode-grid');
+  if (btnMeetModeGrid) {
+    btnMeetModeGrid.onclick = () => window.voiceController.toggleMeetViewMode('grid');
+  }
+
+  const btnMeetMinimize = document.getElementById('btn-meet-minimize');
+  if (btnMeetMinimize) {
+    btnMeetMinimize.onclick = () => window.uiController.showMeetStage(false);
+  }
+
+  const btnMeetFullscreen = document.getElementById('btn-meet-fullscreen');
+  if (btnMeetFullscreen) {
+    btnMeetFullscreen.onclick = () => {
+      const stage = document.getElementById('meet-stage-viewport');
+      if (!document.fullscreenElement) {
+        if (stage?.requestFullscreen) stage.requestFullscreen();
+      } else {
+        if (document.exitFullscreen) document.exitFullscreen();
+      }
+    };
+  }
+
+  // Floating Dock Buttons
+  const btnDockMic = document.getElementById('btn-dock-mic');
+  if (btnDockMic) btnDockMic.onclick = () => window.voiceController.toggleMute();
+
+  const btnDockCam = document.getElementById('btn-dock-camera');
+  if (btnDockCam) btnDockCam.onclick = () => window.voiceController.toggleCamera();
+
+  const btnDockScreen = document.getElementById('btn-dock-screenshare');
+  if (btnDockScreen) btnDockScreen.onclick = () => window.voiceController.toggleScreenShare();
+
+  const btnDockHand = document.getElementById('btn-dock-raise-hand');
+  if (btnDockHand) btnDockHand.onclick = () => window.voiceController.toggleHandRaise();
+
+  const btnDockWhiteboard = document.getElementById('btn-dock-whiteboard');
+  if (btnDockWhiteboard) btnDockWhiteboard.onclick = () => window.whiteboardController?.openModal();
+
+  const btnDockHangup = document.getElementById('btn-dock-hangup');
+  if (btnDockHangup) btnDockHangup.onclick = () => window.voiceController.leaveVoice();
+
+  const btnDockPeople = document.getElementById('btn-dock-people');
+  if (btnDockPeople) btnDockPeople.onclick = () => window.voiceController.toggleInCallDrawer('people');
+
+  const btnDockChat = document.getElementById('btn-dock-chat');
+  if (btnDockChat) btnDockChat.onclick = () => window.voiceController.toggleInCallDrawer('chat');
+
+  const btnCloseMeetDrawer = document.getElementById('btn-close-meet-drawer');
+  if (btnCloseMeetDrawer) btnCloseMeetDrawer.onclick = () => window.voiceController.toggleInCallDrawer(null);
+
+  const tabInCallChat = document.getElementById('tab-in-call-chat');
+  if (tabInCallChat) tabInCallChat.onclick = () => window.voiceController.toggleInCallDrawer('chat');
+
+  const tabInCallPeople = document.getElementById('tab-in-call-people');
+  if (tabInCallPeople) tabInCallPeople.onclick = () => window.voiceController.toggleInCallDrawer('people');
+
+  const btnSendInCall = document.getElementById('btn-send-in-call-msg');
+  const inputInCall = document.getElementById('meet-in-call-input');
+  const sendInCallHandler = () => {
+    if (inputInCall && inputInCall.value.trim()) {
+      window.voiceController.sendInCallMessage(inputInCall.value);
+      inputInCall.value = '';
+    }
+  };
+  if (btnSendInCall) btnSendInCall.onclick = sendInCallHandler;
+  if (inputInCall) {
+    inputInCall.onkeydown = (e) => {
+      if (e.key === 'Enter') sendInCallHandler();
+    };
+  }
+
+  // Reactions Tray
+  const btnDockReactions = document.getElementById('btn-dock-reactions');
+  const trayReactions = document.getElementById('meet-reactions-tray');
+  if (btnDockReactions && trayReactions) {
+    btnDockReactions.onclick = (e) => {
+      e.stopPropagation();
+      const isHidden = trayReactions.style.display === 'none';
+      trayReactions.style.display = isHidden ? 'flex' : 'none';
+    };
+  }
+
+  document.querySelectorAll('.meet-reaction-btn').forEach(btn => {
+    btn.onclick = () => {
+      const emoji = btn.dataset.emoji || btn.textContent.trim();
+      window.voiceController.sendReaction(emoji);
+    };
+  });
+
+  // Mini Dock Buttons
+  const btnMiniReturn = document.getElementById('btn-mini-return-stage');
+  if (btnMiniReturn) btnMiniReturn.onclick = () => window.uiController.showMeetStage(true);
+
+  const btnMiniLeave = document.getElementById('btn-mini-leave-voice');
+  if (btnMiniLeave) btnMiniLeave.onclick = () => window.voiceController.leaveVoice();
+
   // 5. Server Dropdown Menu
   const serverHeader = document.getElementById('server-header');
   const serverDropdown = document.getElementById('server-dropdown');

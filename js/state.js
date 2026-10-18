@@ -29,6 +29,17 @@ var DEFAULT_STATE = {
   isMuted: false,
   isDeafened: false,
   isScreenSharing: false,
+  meetViewMode: 'spotlight', // 'spotlight' or 'grid'
+  isHandRaised: false,
+  inCallDrawerOpen: null, // null, 'chat', 'people', 'activities'
+  activeMeetDoc: 'fintech',
+  docZoom: 100,
+  docPage: 9,
+  inCallMessages: [
+    { id: 'im-1', author: 'rishab jha', time: '13:18', text: 'Sourabh sir, is API consent mandatory under GDPR and RBI framework?' },
+    { id: 'im-2', author: 'Sourabh Singh', time: '13:19', text: 'Yes! Check page 9 of the Fintech notes on screen. Consent must be explicit and revocable.' },
+    { id: 'im-3', author: 'Abhinav Gupta', time: '13:21', text: 'Understood, clear!' }
+  ],
 
   // Communities & Guilds
   guilds: [
@@ -278,9 +289,19 @@ var DEFAULT_STATE = {
 
   // Active Voice Participants
   voiceParticipants: {
+    'chan-voice-study': [
+      { id: 'p-sourabh', name: 'Sourabh Singh', avatarText: 'SS', shortInitials: 'SS', handle: '#चौधरी', avatarBg: '#3c4043', isSpeaking: true, isMuted: false, isPresenter: true, isPinned: true },
+      { id: 'p-rishab', name: 'rishab jha', avatarText: 'RJ', shortInitials: 'RJ', avatarBg: '#1f3a60', isSpeaking: false, isMuted: true },
+      { id: 'p-abhinav', name: 'Abhinav Gupta', avatarText: 'AG', shortInitials: 'AG', avatarBg: '#234938', isSpeaking: false, isMuted: true },
+      { id: 'p-raj', name: 'Raj Hardainiya', avatarText: 'RH', shortInitials: 'RH', avatarBg: '#543b18', isSpeaking: false, isMuted: true },
+      { id: 'p-others', name: '29 others', isOthersTile: true, count: 29, avatarText: '+29', shortInitials: '+29', avatarBg: '#2b2d31' }
+    ],
     'chan-voice-lounge': [
-      { id: 'p-1', name: 'Rohan', avatarText: 'RH', avatarBg: '#f0b232', isSpeaking: false, isMuted: false },
-      { id: 'p-2', name: 'Ghost', avatarText: 'GH', avatarBg: '#eb459e', isSpeaking: false, isMuted: true }
+      { id: 'p-sourabh', name: 'Sourabh Singh', avatarText: 'SS', shortInitials: 'SS', handle: '#चौधरी', avatarBg: '#3c4043', isSpeaking: true, isMuted: false, isPresenter: true },
+      { id: 'p-rishab', name: 'rishab jha', avatarText: 'RJ', shortInitials: 'RJ', avatarBg: '#1f3a60', isSpeaking: false, isMuted: true },
+      { id: 'p-abhinav', name: 'Abhinav Gupta', avatarText: 'AG', shortInitials: 'AG', avatarBg: '#234938', isSpeaking: false, isMuted: true },
+      { id: 'p-raj', name: 'Raj Hardainiya', avatarText: 'RH', shortInitials: 'RH', avatarBg: '#543b18', isSpeaking: false, isMuted: true },
+      { id: 'p-others', name: '29 others', isOthersTile: true, count: 29, avatarText: '+29', shortInitials: '+29', avatarBg: '#2b2d31' }
     ],
     'chan-voice-squad': [
       { id: 'p-3', name: 'Sarah', avatarText: 'SA', avatarBg: '#23a55a', isSpeaking: false, isMuted: false }
@@ -302,6 +323,19 @@ class StateManager {
       if (saved) {
         const parsed = JSON.parse(saved);
         if (parsed && parsed.guilds && parsed.guilds.length && parsed.guilds[0].id === 'guild-discord') {
+          if (parsed.voiceParticipants) {
+            Object.values(parsed.voiceParticipants).forEach(list => {
+              if (Array.isArray(list)) {
+                list.forEach(p => {
+                  if (p.name === 'Sourabh Singh') {
+                    p.avatarText = 'SS';
+                    p.shortInitials = 'SS';
+                    p.handle = '#चौधरी';
+                  }
+                });
+              }
+            });
+          }
           return parsed;
         }
       }

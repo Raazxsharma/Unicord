@@ -762,6 +762,11 @@ input, textarea {
   color: #fff;
   background-size: cover;
   background-position: center;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex-shrink: 0;
+  box-sizing: border-box;
   transition: box-shadow var(--transition-fast);
 }
 
@@ -1755,6 +1760,10 @@ input, textarea {
   background-size: cover;
   background-position: center;
   transition: transform var(--transition-fast);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  box-sizing: border-box;
 }
 
 .voice-card.speaking .voice-card-avatar {
@@ -2034,6 +2043,1191 @@ input, textarea {
   transform: scale(1.05);
 }
 
+/* ==========================================================================
+   GOOGLE MEET & CONFERENCE STAGE DESIGN SYSTEM
+   Ultra-premium, distraction-free video conference & screen share theater
+   ========================================================================== */
+
+/* 1. Full Viewport Theater */
+.meet-stage-viewport {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 100%;
+  background-color: #131517;
+  color: #e8eaed;
+  position: relative;
+  overflow: hidden;
+  user-select: none;
+  font-family: var(--font-primary);
+}
+
+/* 2. Top Header Bar */
+.meet-top-header {
+  height: 52px;
+  background: rgba(20, 21, 24, 0.95);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 16px;
+  flex-shrink: 0;
+  z-index: 10;
+  backdrop-filter: blur(12px);
+}
+
+.meet-header-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.meet-room-code-tag {
+  background: rgba(255, 255, 255, 0.07);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-family: var(--font-code);
+  font-size: 13px;
+  font-weight: 600;
+  color: #8ab4f8;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  letter-spacing: 0.5px;
+}
+
+.meet-room-name-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: #e8eaed;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.meet-live-timer-badge {
+  background: rgba(35, 165, 90, 0.15);
+  border: 1px solid rgba(35, 165, 90, 0.4);
+  color: #23a55a;
+  padding: 3px 8px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 700;
+  font-family: var(--font-code);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.meet-live-timer-badge::before {
+  content: '';
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background-color: #23a55a;
+  animation: livePulse 1.5s infinite;
+}
+
+@keyframes livePulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.4; transform: scale(0.85); }
+}
+
+.meet-quality-tag {
+  background: rgba(88, 101, 242, 0.15);
+  color: #8ab4f8;
+  border: 1px solid rgba(88, 101, 242, 0.3);
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 7px;
+  border-radius: 4px;
+}
+
+.meet-header-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.meet-view-switch-btn {
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: #bdc1c6;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 6px 12px;
+  border-radius: 20px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.15s ease;
+}
+
+.meet-view-switch-btn:hover {
+  background: rgba(255, 255, 255, 0.14);
+  color: #ffffff;
+}
+
+.meet-view-switch-btn.active {
+  background: #5865F2;
+  color: #ffffff;
+  border-color: #5865F2;
+}
+
+.meet-icon-action-btn {
+  background: transparent;
+  border: none;
+  color: #9aa0a6;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.meet-icon-action-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: #ffffff;
+}
+
+/* 3. Main Stage Layout (Spotlight Area + Participant Sidebar) */
+.meet-stage-body {
+  flex: 1;
+  display: flex;
+  position: relative;
+  overflow: hidden;
+  padding: 12px 14px 76px 14px;
+  gap: 14px;
+  box-sizing: border-box;
+}
+
+/* Spotlight Main Container */
+.meet-spotlight-area {
+  flex: 1;
+  min-width: 0;
+  background: #1e1f22;
+  border-radius: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  position: relative;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.45);
+}
+
+/* Presentation Top Header (Google Docs / Meet Shell) */
+.meet-presentation-banner {
+  background: #1e1f22;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+  z-index: 10;
+}
+
+.meet-banner-top-row {
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 14px;
+}
+
+.meet-presenter-badge {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(0, 0, 0, 0.45);
+  padding: 4px 10px;
+  border-radius: 20px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.meet-presenter-avatar-small {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: #3c4043;
+  color: #fff;
+  font-size: 11px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  box-sizing: border-box;
+  flex-shrink: 0;
+}
+
+.meet-presenter-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: #ffffff;
+}
+
+.meet-presenting-subtag {
+  color: #8ab4f8;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+/* Google Docs Menu Row */
+.meet-doc-shell-menubar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 4px 14px 8px 14px;
+  background: #18191c;
+  border-top: 1px solid rgba(255, 255, 255, 0.04);
+}
+
+.meet-doc-title-group {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.meet-doc-icon {
+  color: #4285f4;
+  display: flex;
+  align-items: center;
+}
+
+.meet-doc-title-text {
+  font-size: 14px;
+  font-weight: 600;
+  color: #e8eaed;
+}
+
+.meet-doc-menu-list {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-left: 14px;
+  font-size: 12px;
+  color: #9aa0a6;
+}
+
+.meet-doc-menu-item {
+  cursor: pointer;
+  transition: color 0.15s ease;
+}
+
+.meet-doc-menu-item:hover {
+  color: #ffffff;
+}
+
+.meet-open-docs-btn {
+  background: #ffffff;
+  color: #1a73e8;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 4px 10px;
+  border-radius: 4px;
+  border: none;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+  transition: background 0.15s ease;
+}
+
+.meet-open-docs-btn:hover {
+  background: #f1f3f4;
+}
+
+.meet-doc-tools-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.meet-doc-page-badge {
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  color: #bdc1c6;
+  font-family: var(--font-code);
+}
+
+.meet-doc-tool-btn {
+  background: rgba(255, 255, 255, 0.06);
+  border: none;
+  color: #bdc1c6;
+  width: 26px;
+  height: 26px;
+  border-radius: 4px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s ease;
+}
+
+.meet-doc-tool-btn:hover {
+  background: rgba(255, 255, 255, 0.14);
+  color: #ffffff;
+}
+
+.meet-laser-toggle-btn.active {
+  background: #ea4335 !important;
+  color: #ffffff !important;
+  box-shadow: 0 0 10px rgba(234, 67, 53, 0.6);
+}
+
+/* Spotlight Viewport Content (Document or Video) */
+.meet-presentation-viewport {
+  flex: 1;
+  position: relative;
+  overflow: auto;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  background: #2b2d31;
+  padding: 24px;
+}
+
+/* Floating Laser Pointer Canvas */
+.meet-laser-canvas {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 30;
+}
+
+.meet-laser-active-cursor,
+.meet-laser-active-cursor * {
+  cursor: crosshair !important;
+}
+
+/* Screenshare HUD Overlay */
+.screenshare-hud-overlay {
+  position: absolute;
+  top: 12px;
+  left: 14px;
+  right: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  pointer-events: none;
+  z-index: 25;
+}
+
+.screenshare-telemetry-pill {
+  background: rgba(18, 19, 22, 0.85);
+  backdrop-filter: blur(14px);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 20px;
+  padding: 5px 12px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #e8eaed;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+}
+
+.screenshare-live-pulse {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #ea4335;
+  animation: livePulse 1.2s infinite;
+}
+
+.screenshare-hud-buttons {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  pointer-events: auto;
+}
+
+.screenshare-pill-btn {
+  background: rgba(30, 31, 34, 0.88);
+  backdrop-filter: blur(14px);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  color: #e8eaed;
+  padding: 5px 12px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  transition: all 0.15s ease;
+}
+
+.screenshare-pill-btn:hover {
+  background: rgba(255, 255, 255, 0.2);
+  color: #ffffff;
+  transform: translateY(-1px);
+}
+
+.screenshare-pill-btn.danger {
+  background: #ea4335;
+  border-color: #ea4335;
+  color: #ffffff;
+}
+
+.screenshare-pill-btn.danger:hover {
+  background: #d93025;
+}
+
+/* Floating Bottom Right Viewer Inspection Capsule */
+.meet-doc-floating-capsule {
+  position: absolute;
+  bottom: 16px;
+  right: 16px;
+  background: rgba(28, 30, 34, 0.9);
+  backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 30px;
+  padding: 4px 10px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5);
+  z-index: 20;
+}
+
+/* Google Docs/Notes Paper Style Container */
+.meet-doc-paper {
+  width: 100%;
+  max-width: 820px;
+  background: #ffffff;
+  color: #202124;
+  border-radius: 4px;
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.35);
+  padding: 48px 56px;
+  min-height: 860px;
+  box-sizing: border-box;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  line-height: 1.6;
+  transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  transform-origin: top center;
+}
+
+.meet-doc-paper h2 {
+  font-size: 20px;
+  font-weight: 700;
+  color: #202124;
+  margin-bottom: 12px;
+}
+
+.meet-doc-paper h3 {
+  font-size: 17px;
+  font-weight: 700;
+  color: #1a73e8;
+  margin-top: 24px;
+  margin-bottom: 8px;
+}
+
+.meet-doc-paper p {
+  font-size: 14px;
+  color: #3c4043;
+  margin-bottom: 16px;
+  text-align: justify;
+}
+
+.meet-doc-paper .highlight-box {
+  background: #f8f9fa;
+  border-left: 4px solid #1a73e8;
+  padding: 12px 16px;
+  border-radius: 0 8px 8px 0;
+  margin: 16px 0;
+  font-size: 13.5px;
+  color: #3c4043;
+}
+
+/* When Video Stream is Presenting */
+.meet-video-screen {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  background: #000000;
+}
+
+/* 4. Participant Right Sidebar Grid (Google Meet Layout) */
+.meet-participants-sidebar {
+  width: 340px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  overflow-y: auto;
+}
+
+/* Presenter Tile (Top of Sidebar) */
+.meet-presenter-card {
+  height: 160px;
+  background: #1e1f22;
+  border-radius: 12px;
+  border: 2px solid transparent;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  overflow: hidden;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.meet-presenter-card.speaking {
+  border-color: #23a55a;
+  box-shadow: 0 0 16px rgba(35, 165, 90, 0.45);
+}
+
+.meet-presenter-avatar-large {
+  width: 76px;
+  height: 76px;
+  border-radius: 50%;
+  background: #3c4043;
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+  font-weight: 700;
+  letter-spacing: -0.5px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  padding: 4px;
+  box-sizing: border-box;
+  transition: transform 0.2s ease;
+}
+
+.meet-presenter-card.speaking .meet-presenter-avatar-large {
+  transform: scale(1.06);
+}
+
+/* Equalizer Speaking Bars in Card */
+.meet-audio-wave {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  background: rgba(0, 0, 0, 0.6);
+  padding: 4px 7px;
+  border-radius: 12px;
+}
+
+.meet-audio-wave .wave-bar {
+  width: 3px;
+  height: 6px;
+  background: #23a55a;
+  border-radius: 2px;
+}
+
+.meet-presenter-card.speaking .wave-bar:nth-child(1) { animation: wavePulse 0.6s infinite ease-in-out; }
+.meet-presenter-card.speaking .wave-bar:nth-child(2) { animation: wavePulse 0.4s infinite ease-in-out 0.15s; }
+.meet-presenter-card.speaking .wave-bar:nth-child(3) { animation: wavePulse 0.7s infinite ease-in-out 0.1s; }
+
+@keyframes wavePulse {
+  0%, 100% { height: 4px; }
+  50% { height: 16px; }
+}
+
+/* 2x2 Participants Grid */
+.meet-participants-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  flex: 1;
+}
+
+/* Generic Participant Tile */
+.meet-tile {
+  background: #1e1f22;
+  border-radius: 12px;
+  border: 2px solid transparent;
+  min-height: 120px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  overflow: hidden;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  cursor: pointer;
+}
+
+.meet-tile:hover {
+  background: #232529;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 14px rgba(0, 0, 0, 0.3);
+}
+
+.meet-tile.speaking {
+  border-color: #23a55a;
+  box-shadow: 0 0 14px rgba(35, 165, 90, 0.4);
+}
+
+.meet-tile-avatar {
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  font-size: 18px;
+  font-weight: 700;
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.25);
+  background-size: cover;
+  background-position: center;
+  transition: transform 0.2s ease;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  box-sizing: border-box;
+  flex-shrink: 0;
+}
+
+.meet-tile.speaking .meet-tile-avatar {
+  transform: scale(1.08);
+}
+
+/* Bottom Name Pill (Google Meet Style) */
+.meet-tile-name-pill {
+  position: absolute;
+  bottom: 8px;
+  left: 8px;
+  background: rgba(0, 0, 0, 0.65);
+  backdrop-filter: blur(8px);
+  color: #ffffff;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 3px 8px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  max-width: calc(100% - 16px);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  z-index: 2;
+}
+
+/* Mic Status Badge (Top Right) */
+.meet-tile-mic-badge {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.65);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2;
+}
+
+.meet-tile-mic-badge.muted {
+  background: rgba(234, 67, 53, 0.85);
+  color: #fff;
+}
+
+/* Hand Raised Indicator */
+.meet-hand-raised-badge {
+  position: absolute;
+  bottom: 8px;
+  right: 8px;
+  background: #fbbc04;
+  color: #202124;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.35);
+  animation: handBounce 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  z-index: 2;
+}
+
+@keyframes handBounce {
+  0% { transform: scale(0.4); opacity: 0; }
+  70% { transform: scale(1.2); opacity: 1; }
+  100% { transform: scale(1); }
+}
+
+/* "+29 others" Overflow Tile */
+.meet-tile-others {
+  background: #1e1f22;
+  border-radius: 12px;
+  min-height: 120px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  cursor: pointer;
+  border: 1px dashed rgba(255, 255, 255, 0.15);
+  transition: all 0.2s ease;
+}
+
+.meet-tile-others:hover {
+  background: #25272c;
+  border-color: rgba(255, 255, 255, 0.3);
+  transform: translateY(-2px);
+}
+
+.meet-avatar-stack {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 8px;
+}
+
+.meet-avatar-stack-item {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  border: 2px solid #1e1f22;
+  margin-left: -10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 700;
+  color: #fff;
+}
+
+.meet-avatar-stack-item:first-child {
+  margin-left: 0;
+}
+
+.meet-others-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: #e8eaed;
+}
+
+/* 5. Gallery / Grid View (Alternative Layout) */
+.meet-grid-view {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 14px;
+  width: 100%;
+  height: 100%;
+  overflow-y: auto;
+}
+
+.meet-grid-view .meet-tile {
+  min-height: 180px;
+  height: 100%;
+}
+
+.meet-grid-view .meet-tile-avatar {
+  width: 72px;
+  height: 72px;
+  font-size: 24px;
+}
+
+/* 6. Google Meet Floating Control Dock */
+.meet-bottom-dock {
+  position: absolute;
+  bottom: 16px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(30, 31, 34, 0.88);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 9999px;
+  padding: 6px 14px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.55), 0 2px 6px rgba(0, 0, 0, 0.3);
+  z-index: 100;
+}
+
+.meet-dock-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.meet-dock-divider {
+  width: 1px;
+  height: 24px;
+  background: rgba(255, 255, 255, 0.15);
+  margin: 0 4px;
+}
+
+.meet-dock-btn {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  border: none;
+  background: #3c4043;
+  color: #ffffff;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  position: relative;
+  outline: none;
+}
+
+.meet-dock-btn:hover {
+  background: #4a4f54;
+  transform: scale(1.06);
+}
+
+.meet-dock-btn:active {
+  transform: scale(0.96);
+}
+
+/* Muted / Off State (Google Meet Red) */
+.meet-dock-btn.muted {
+  background: #ea4335 !important;
+  color: #ffffff !important;
+}
+
+.meet-dock-btn.muted:hover {
+  background: #d93025 !important;
+}
+
+/* Active State (Google Meet Blue/Green/Amber) */
+.meet-dock-btn.active-blue {
+  background: #5865F2 !important;
+  color: #ffffff !important;
+}
+
+.meet-dock-btn.hand-raised {
+  background: #fbbc04 !important;
+  color: #202124 !important;
+  box-shadow: 0 0 14px rgba(251, 188, 4, 0.55);
+}
+
+/* End Call Pill Button */
+.meet-dock-btn.hangup {
+  background: #ea4335 !important;
+  width: 56px;
+  border-radius: 28px;
+}
+
+.meet-dock-btn.hangup:hover {
+  background: #d93025 !important;
+  transform: scale(1.08);
+}
+
+/* Utility Info Pill on Left & Right of Floating Dock */
+.meet-dock-badge {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  background: #ea4335;
+  color: #fff;
+  font-size: 10px;
+  font-weight: 700;
+  padding: 1px 5px;
+  border-radius: 10px;
+  border: 2px solid #1e1f22;
+}
+
+/* 7. Live Emoji Reactions Floating Bar & Particles */
+.meet-reactions-tray {
+  position: absolute;
+  bottom: 74px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(32, 33, 36, 0.95);
+  backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 30px;
+  padding: 6px 12px;
+  display: flex;
+  gap: 8px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+  animation: trayPop 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  z-index: 101;
+}
+
+@keyframes trayPop {
+  from { opacity: 0; transform: translateX(-50%) translateY(10px) scale(0.9); }
+  to { opacity: 1; transform: translateX(-50%) translateY(0) scale(1); }
+}
+
+.meet-reaction-btn {
+  background: transparent;
+  border: none;
+  font-size: 24px;
+  cursor: pointer;
+  padding: 4px 6px;
+  border-radius: 50%;
+  transition: transform 0.15s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.meet-reaction-btn:hover {
+  transform: scale(1.35);
+}
+
+/* Floating Reaction Particles */
+.meet-reactions-overlay {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  overflow: hidden;
+  z-index: 99;
+}
+
+.floating-reaction-item {
+  position: absolute;
+  bottom: 80px;
+  font-size: 32px;
+  animation: floatUpParticle 3s cubic-bezier(0.2, 0.8, 0.3, 1) forwards;
+  pointer-events: none;
+  user-select: none;
+  filter: drop-shadow(0 4px 10px rgba(0, 0, 0, 0.3));
+}
+
+@keyframes floatUpParticle {
+  0% {
+    opacity: 1;
+    transform: translateY(0) scale(0.8) rotate(0deg);
+  }
+  50% {
+    opacity: 0.9;
+    transform: translateY(-260px) scale(1.25) rotate(15deg);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-540px) scale(1.4) rotate(-15deg);
+  }
+}
+
+/* 8. Slide-over Side Drawer (Chat / People / Activities) */
+.meet-side-drawer {
+  position: absolute;
+  top: 52px;
+  right: 0;
+  bottom: 0;
+  width: 340px;
+  background: #1e1f22;
+  border-left: 1px solid rgba(255, 255, 255, 0.08);
+  display: flex;
+  flex-direction: column;
+  z-index: 40;
+  box-shadow: -8px 0 24px rgba(0, 0, 0, 0.4);
+  animation: slideDrawer 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes slideDrawer {
+  from { transform: translateX(100%); }
+  to { transform: translateX(0); }
+}
+
+.meet-drawer-header {
+  padding: 14px 16px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.meet-drawer-tabs {
+  display: flex;
+  gap: 8px;
+}
+
+.meet-drawer-tab-btn {
+  background: transparent;
+  border: none;
+  color: #9aa0a6;
+  font-size: 13px;
+  font-weight: 600;
+  padding: 6px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.meet-drawer-tab-btn:hover {
+  color: #ffffff;
+}
+
+.meet-drawer-tab-btn.active {
+  background: rgba(255, 255, 255, 0.1);
+  color: #ffffff;
+}
+
+.meet-drawer-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* In-Call Messages Stream */
+.meet-in-call-msg {
+  display: flex;
+  flex-direction: column;
+  background: rgba(255, 255, 255, 0.04);
+  border-radius: 8px;
+  padding: 10px 12px;
+  gap: 4px;
+}
+
+.meet-in-call-author {
+  font-size: 12px;
+  font-weight: 700;
+  color: #8ab4f8;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.meet-in-call-time {
+  font-size: 11px;
+  color: #80868b;
+  font-weight: normal;
+}
+
+.meet-in-call-text {
+  font-size: 13px;
+  color: #e8eaed;
+  line-height: 1.4;
+}
+
+.meet-drawer-footer {
+  padding: 12px 16px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.meet-chat-input-row {
+  display: flex;
+  align-items: center;
+  background: #2b2d31;
+  border-radius: 20px;
+  padding: 6px 12px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.meet-chat-input-row input {
+  flex: 1;
+  background: transparent;
+  border: none;
+  outline: none;
+  color: #ffffff;
+  font-size: 13px;
+}
+
+.meet-chat-send-btn {
+  background: transparent;
+  border: none;
+  color: #5865F2;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px;
+}
+
+/* 9. Floating Mini-Dock Banner when browsing other channels */
+.meet-mini-dock {
+  position: fixed;
+  bottom: 20px;
+  right: 240px;
+  background: rgba(30, 31, 34, 0.95);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(88, 101, 242, 0.4);
+  border-radius: 30px;
+  padding: 8px 16px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+  z-index: 1000;
+  animation: miniDockIn 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes miniDockIn {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.meet-mini-status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.meet-mini-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background-color: #23a55a;
+  animation: livePulse 1.5s infinite;
+}
+
+.meet-mini-text {
+  font-size: 13px;
+  font-weight: 600;
+  color: #e8eaed;
+}
+
+.meet-mini-btn-expand {
+  background: #5865F2;
+  color: #ffffff;
+  border: none;
+  border-radius: 14px;
+  padding: 4px 10px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.meet-mini-btn-expand:hover {
+  background: #4752C4;
+}
+
+.meet-mini-btn-leave {
+  background: rgba(234, 67, 53, 0.2);
+  border: 1px solid rgba(234, 67, 53, 0.4);
+  color: #ea4335;
+  border-radius: 14px;
+  padding: 4px 8px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.meet-mini-btn-leave:hover {
+  background: #ea4335;
+  color: #ffffff;
+}
+
+
 /* --- members.css --- */
 /* ==========================================================================
    MEMBERS SIDEBAR & USER PROFILE CARD POPOVER
@@ -2174,11 +3368,15 @@ input, textarea {
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 32px;
+  font-size: 28px;
   font-weight: 700;
   color: #fff;
   background-size: cover;
   background-position: center;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  box-sizing: border-box;
 }
 
 .popover-avatar-wrap .status-indicator {
@@ -4404,7 +5602,12 @@ input, textarea {
         </div>
 
         <div class="nav-right">
-                    <button class="nav-icon-btn" id="btn-open-whiteboard" data-tooltip="Study Whiteboard (Activity)">
+                              <button class="nav-icon-btn" id="btn-toggle-meet-stage" data-tooltip="Conference Stage (Google Meet View)">
+            <svg viewBox="0 0 24 24" width="22" height="22">
+              <path fill="currentColor" d="M19 4H5a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2zm0 14H5V6h14v12zM8 10h8v4H8z"/>
+            </svg>
+          </button>
+<button class="nav-icon-btn" id="btn-open-whiteboard" data-tooltip="Study Whiteboard (Activity)">
             <svg viewBox="0 0 24 24" width="22" height="22">
               <path fill="currentColor" d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/>
             </svg>
@@ -4545,6 +5748,159 @@ input, textarea {
             <div class="active-now-column">
               <h3 class="active-now-title">Active Now</h3>
               <div class="active-now-list" id="active-now-list"></div>
+            </div>
+          </div>
+        </section>
+
+        <!-- B3. Google Meet & Conference Stage Viewport -->
+        <section class="meet-stage-viewport" id="meet-stage-viewport" style="display: none;">
+          <!-- Top Meeting Header Bar -->
+          <div class="meet-top-header">
+            <div class="meet-header-left">
+              <div class="meet-room-code-tag">
+                <svg viewBox="0 0 24 24" width="16" height="16"><path fill="currentColor" d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-2 10h-4v4h-2v-4H7v-2h4V7h2v4h4v2z"/></svg>
+                <span id="meet-room-code">dtq-geaw-mhs</span>
+              </div>
+              <div class="meet-room-name-title" id="meet-room-title">
+                24/7 Study Room
+              </div>
+              <div class="meet-live-timer-badge" id="meet-live-timer">13:22</div>
+              <div class="meet-quality-tag">HD 1080p • 60 FPS</div>
+            </div>
+
+            <div class="meet-header-right">
+              <button class="meet-view-switch-btn active" id="btn-meet-mode-spotlight" title="Spotlight Presentation View">
+                <svg viewBox="0 0 24 24" width="16" height="16"><path fill="currentColor" d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-7 14H6v-6h6v6zm7 0h-5v-2h5v2zm0-4h-5v-2h5v2zm0-4h-5V7h5v2z"/></svg>
+                Spotlight
+              </button>
+              <button class="meet-view-switch-btn" id="btn-meet-mode-grid" title="Equal Participant Grid View">
+                <svg viewBox="0 0 24 24" width="16" height="16"><path fill="currentColor" d="M4 4h7v7H4V4zm9 0h7v7h-7V4zm-9 9h7v7H4v-7zm9 0h7v7h-7v-7z"/></svg>
+                Grid View
+              </button>
+              <button class="meet-icon-action-btn" id="btn-meet-minimize" title="Switch to Text Chat">
+                <svg viewBox="0 0 24 24" width="18" height="18"><path fill="currentColor" d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z"/></svg>
+              </button>
+              <button class="meet-icon-action-btn" id="btn-meet-fullscreen" title="Full Screen">
+                <svg viewBox="0 0 24 24" width="18" height="18"><path fill="currentColor" d="M7 14H5v5h5v-2H7v-3zm-2-4h2V7h3V5H5v5zm12 7h-3v2h5v-5h-2v3zM14 5v2h3v3h2V5h-5z"/></svg>
+              </button>
+            </div>
+          </div>
+
+          <!-- Stage Body (Spotlight on Left + Participant Sidebar on Right OR Grid) -->
+          <div class="meet-stage-body" id="meet-stage-body">
+            <!-- Dynamic Injection by uiController.renderMeetStage() -->
+          </div>
+
+          <!-- Floating Emoji Reactions Overlay Layer -->
+          <div class="meet-reactions-overlay" id="meet-reactions-overlay"></div>
+
+          <!-- Emoji Reactions Popup Tray (Hidden by default) -->
+          <div class="meet-reactions-tray" id="meet-reactions-tray" style="display: none;">
+            <button class="meet-reaction-btn" data-emoji="❤️">❤️</button>
+            <button class="meet-reaction-btn" data-emoji="👏">👏</button>
+            <button class="meet-reaction-btn" data-emoji="😂">😂</button>
+            <button class="meet-reaction-btn" data-emoji="🎉">🎉</button>
+            <button class="meet-reaction-btn" data-emoji="🔥">🔥</button>
+            <button class="meet-reaction-btn" data-emoji="💡">💡</button>
+            <button class="meet-reaction-btn" data-emoji="💯">💯</button>
+          </div>
+
+          <!-- Google Meet Floating Action Dock Bar -->
+          <div class="meet-bottom-dock">
+            <!-- Left Group: Mic & Camera with Mute Indicators -->
+            <div class="meet-dock-group">
+              <button class="meet-dock-btn" id="btn-dock-mic" title="Toggle Microphone">
+                <svg class="dock-mic-on" viewBox="0 0 24 24" width="20" height="20">
+                  <path fill="currentColor" d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z"/><path fill="currentColor" d="M17 11c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z"/>
+                </svg>
+                <svg class="dock-mic-off" style="display:none;" viewBox="0 0 24 24" width="20" height="20">
+                  <path fill="#ffffff" d="M19 11h-1.7c0 .74-.16 1.43-.43 2.05l1.23 1.23c.56-.98.9-2.09.9-3.28zm-4.02.17c0-.06.02-.11.02-.17V5c0-1.66-1.34-3-3-3S9 3.34 9 5v.18l5.98 5.99zM4.27 3L3 4.27l6.01 6.01V11c0 1.66 1.33 3 2.99 3 .22 0 .44-.03.65-.08l1.66 1.66c-.71.33-1.5.52-2.31.52-2.76 0-5.3-2.24-5.3-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c1.33-.19 2.53-.74 3.53-1.54l3.2 3.2L21 18.27 4.27 3z"/>
+                </svg>
+              </button>
+
+              <button class="meet-dock-btn" id="btn-dock-camera" title="Toggle Camera">
+                <svg viewBox="0 0 24 24" width="20" height="20">
+                  <path fill="currentColor" d="M17 10.5V7c0-.55-.45-1-1-1H4c-.55 0-1 .45-1 1v10c0 .55.45 1 1 1h12c.55 0 1-.45 1-1v-3.5l4 4v-11l-4 4z"/>
+                </svg>
+              </button>
+            </div>
+
+            <div class="meet-dock-divider"></div>
+
+            <!-- Center Group: Presentation & Collaboration -->
+            <div class="meet-dock-group">
+              <button class="meet-dock-btn" id="btn-dock-screenshare" title="Share your screen">
+                <svg viewBox="0 0 24 24" width="20" height="20">
+                  <path fill="currentColor" d="M20 18c1.1 0 1.99-.9 1.99-2L22 6c0-1.11-.9-2-2-2H4c-1.1 0-2 .89-2 2v10c0 1.1.89 2 2 2H0v2h24v-2h-4zM4 6h16v10H4V6z"/>
+                </svg>
+              </button>
+
+              <button class="meet-dock-btn" id="btn-dock-reactions" title="Send a reaction">
+                <svg viewBox="0 0 24 24" width="20" height="20">
+                  <path fill="currentColor" d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm3.5-9c.83 0 1.5-.67 1.5-1.5S16.33 8 15.5 8 14 8.67 14 9.5s.67 1.5 1.5 1.5zm-7 0c.83 0 1.5-.67 1.5-1.5S9.33 8 8.5 8 7 8.67 7 9.5 7.67 11 8.5 11zm3.5 6.5c2.33 0 4.31-1.46 5.11-3.5H6.89c.8 2.04 2.78 3.5 5.11 3.5z"/>
+                </svg>
+              </button>
+
+              <button class="meet-dock-btn" id="btn-dock-raise-hand" title="Raise hand">
+                <span style="font-size:18px;">✋</span>
+              </button>
+
+              <button class="meet-dock-btn" id="btn-dock-whiteboard" title="Open Interactive Whiteboard">
+                <svg viewBox="0 0 24 24" width="20" height="20">
+                  <path fill="currentColor" d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/>
+                </svg>
+              </button>
+
+              <!-- Hangup End Call Pill -->
+              <button class="meet-dock-btn hangup" id="btn-dock-hangup" title="Leave call">
+                <svg viewBox="0 0 24 24" width="22" height="22">
+                  <path fill="#ffffff" d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm3.7 12.3c.39.39.39 1.02 0 1.41-.39.39-1.02.39-1.41 0L12 13.41l-2.29 2.3c-.39.39-1.02.39-1.41 0-.39-.39-.39-1.02 0-1.41L10.59 12 8.3 9.71c-.39-.39-.39-1.02 0-1.41.39-.39 1.02-.39 1.41 0L12 10.59l2.29-2.3c.39-.39 1.02-.39 1.41 0 .39.39.39 1.02 0 1.41L13.41 12l2.29 2.3z"/>
+                </svg>
+              </button>
+            </div>
+
+            <div class="meet-dock-divider"></div>
+
+            <!-- Right Group: People, Chat & Activities -->
+            <div class="meet-dock-group">
+              <button class="meet-dock-btn" id="btn-dock-people" title="Show participants">
+                <svg viewBox="0 0 24 24" width="20" height="20">
+                  <path fill="currentColor" d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5s-3 1.34-3 3 1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/>
+                </svg>
+                <span class="meet-dock-badge" id="meet-dock-people-badge">34</span>
+              </button>
+
+              <button class="meet-dock-btn" id="btn-dock-chat" title="In-Call Chat">
+                <svg viewBox="0 0 24 24" width="20" height="20">
+                  <path fill="currentColor" d="M20 2H4c-1.1 0-1.99.9-1.99 2L2 22l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zM6 9h12v2H6V9zm8 5H6v-2h8v2zm4-6H6V6h12v2z"/>
+                </svg>
+              </button>
+            </div>
+          </div>
+
+          <!-- Slide-over In-Call Drawer -->
+          <div class="meet-side-drawer" id="meet-side-drawer" style="display: none;">
+            <div class="meet-drawer-header">
+              <div class="meet-drawer-tabs">
+                <button class="meet-drawer-tab-btn active" id="tab-in-call-chat">In-Call Chat</button>
+                <button class="meet-drawer-tab-btn" id="tab-in-call-people">People (34)</button>
+              </div>
+              <button class="meet-icon-action-btn" id="btn-close-meet-drawer" title="Close Drawer">✕</button>
+            </div>
+
+            <!-- Drawer Body -->
+            <div class="meet-drawer-body" id="meet-drawer-body">
+              <!-- Rendered messages or participant list -->
+            </div>
+
+            <!-- Drawer Footer (Chat Input) -->
+            <div class="meet-drawer-footer" id="meet-drawer-footer">
+              <div class="meet-chat-input-row">
+                <input type="text" id="meet-in-call-input" placeholder="Send a message to everyone..." autocomplete="off">
+                <button class="meet-chat-send-btn" id="btn-send-in-call-msg">
+                  <svg viewBox="0 0 24 24" width="18" height="18"><path fill="currentColor" d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
+                </button>
+              </div>
             </div>
           </div>
         </section>
@@ -5253,6 +6609,16 @@ input, textarea {
       };
     });
   </script>
+<!-- Floating Mini Dock when browsing text channels while in voice -->
+  <div class="meet-mini-dock" id="meet-mini-dock" style="display: none;">
+    <div class="meet-mini-status">
+      <div class="meet-mini-dot"></div>
+      <div class="meet-mini-text" id="meet-mini-channel-text">Connected: 24/7 Study Room (Sourabh Singh presenting)</div>
+    </div>
+    <button class="meet-mini-btn-expand" id="btn-mini-return-stage">Return to Stage</button>
+    <button class="meet-mini-btn-leave" id="btn-mini-leave-voice">Disconnect</button>
+  </div>
+
 <script id="unicord-bundle">
 // --- audio.js ---
 /**
@@ -5934,6 +7300,17 @@ var DEFAULT_STATE = {
   isMuted: false,
   isDeafened: false,
   isScreenSharing: false,
+  meetViewMode: 'spotlight', // 'spotlight' or 'grid'
+  isHandRaised: false,
+  inCallDrawerOpen: null, // null, 'chat', 'people', 'activities'
+  activeMeetDoc: 'fintech',
+  docZoom: 100,
+  docPage: 9,
+  inCallMessages: [
+    { id: 'im-1', author: 'rishab jha', time: '13:18', text: 'Sourabh sir, is API consent mandatory under GDPR and RBI framework?' },
+    { id: 'im-2', author: 'Sourabh Singh', time: '13:19', text: 'Yes! Check page 9 of the Fintech notes on screen. Consent must be explicit and revocable.' },
+    { id: 'im-3', author: 'Abhinav Gupta', time: '13:21', text: 'Understood, clear!' }
+  ],
 
   // Communities & Guilds
   guilds: [
@@ -6183,9 +7560,19 @@ var DEFAULT_STATE = {
 
   // Active Voice Participants
   voiceParticipants: {
+    'chan-voice-study': [
+      { id: 'p-sourabh', name: 'Sourabh Singh', avatarText: 'SS', shortInitials: 'SS', handle: '#चौधरी', avatarBg: '#3c4043', isSpeaking: true, isMuted: false, isPresenter: true, isPinned: true },
+      { id: 'p-rishab', name: 'rishab jha', avatarText: 'RJ', shortInitials: 'RJ', avatarBg: '#1f3a60', isSpeaking: false, isMuted: true },
+      { id: 'p-abhinav', name: 'Abhinav Gupta', avatarText: 'AG', shortInitials: 'AG', avatarBg: '#234938', isSpeaking: false, isMuted: true },
+      { id: 'p-raj', name: 'Raj Hardainiya', avatarText: 'RH', shortInitials: 'RH', avatarBg: '#543b18', isSpeaking: false, isMuted: true },
+      { id: 'p-others', name: '29 others', isOthersTile: true, count: 29, avatarText: '+29', shortInitials: '+29', avatarBg: '#2b2d31' }
+    ],
     'chan-voice-lounge': [
-      { id: 'p-1', name: 'Rohan', avatarText: 'RH', avatarBg: '#f0b232', isSpeaking: false, isMuted: false },
-      { id: 'p-2', name: 'Ghost', avatarText: 'GH', avatarBg: '#eb459e', isSpeaking: false, isMuted: true }
+      { id: 'p-sourabh', name: 'Sourabh Singh', avatarText: 'SS', shortInitials: 'SS', handle: '#चौधरी', avatarBg: '#3c4043', isSpeaking: true, isMuted: false, isPresenter: true },
+      { id: 'p-rishab', name: 'rishab jha', avatarText: 'RJ', shortInitials: 'RJ', avatarBg: '#1f3a60', isSpeaking: false, isMuted: true },
+      { id: 'p-abhinav', name: 'Abhinav Gupta', avatarText: 'AG', shortInitials: 'AG', avatarBg: '#234938', isSpeaking: false, isMuted: true },
+      { id: 'p-raj', name: 'Raj Hardainiya', avatarText: 'RH', shortInitials: 'RH', avatarBg: '#543b18', isSpeaking: false, isMuted: true },
+      { id: 'p-others', name: '29 others', isOthersTile: true, count: 29, avatarText: '+29', shortInitials: '+29', avatarBg: '#2b2d31' }
     ],
     'chan-voice-squad': [
       { id: 'p-3', name: 'Sarah', avatarText: 'SA', avatarBg: '#23a55a', isSpeaking: false, isMuted: false }
@@ -6207,6 +7594,19 @@ class StateManager {
       if (saved) {
         const parsed = JSON.parse(saved);
         if (parsed && parsed.guilds && parsed.guilds.length && parsed.guilds[0].id === 'guild-discord') {
+          if (parsed.voiceParticipants) {
+            Object.values(parsed.voiceParticipants).forEach(list => {
+              if (Array.isArray(list)) {
+                list.forEach(p => {
+                  if (p.name === 'Sourabh Singh') {
+                    p.avatarText = 'SS';
+                    p.shortInitials = 'SS';
+                    p.handle = '#चौधरी';
+                  }
+                });
+              }
+            });
+          }
           return parsed;
         }
       }
@@ -7241,6 +8641,8 @@ class VoiceController {
     this.cameraStream = null;
     this.screenStream = null;
     this.isCameraOn = false;
+    this.callTimerInterval = null;
+    this.callElapsedSeconds = 802; // Initial 13:22 to match realistic Google Meet session
     this.initAudioHooks();
   }
 
@@ -7250,9 +8652,35 @@ class VoiceController {
     };
   }
 
+  startCallTimer() {
+    this.stopCallTimer();
+    this.callTimerInterval = setInterval(() => {
+      this.callElapsedSeconds++;
+      const timerEl = document.getElementById('meet-live-timer');
+      if (timerEl) {
+        timerEl.textContent = this.getFormattedTime();
+      }
+    }, 1000);
+  }
+
+  stopCallTimer() {
+    if (this.callTimerInterval) {
+      clearInterval(this.callTimerInterval);
+      this.callTimerInterval = null;
+    }
+  }
+
+  getFormattedTime() {
+    const mins = Math.floor(this.callElapsedSeconds / 60);
+    const secs = this.callElapsedSeconds % 60;
+    return `${mins}:${secs < 10 ? '0' : ''}${secs}`;
+  }
+
   async joinVoice(channelId, channelName, guildName) {
     if (window.stateManager.state.activeVoiceChannelId === channelId) {
-      return; // Already in this channel
+      // Already in this channel, open stage view if requested
+      window.uiController.showMeetStage(true, channelName, guildName);
+      return;
     }
 
     // If currently in another voice channel, leave first
@@ -7261,8 +8689,10 @@ class VoiceController {
     }
 
     window.stateManager.state.activeVoiceChannelId = channelId;
+    window.stateManager.state.activeStageChannelId = channelId;
 
-    // Play Join chime
+    // Start timer & audio chime
+    this.startCallTimer();
     window.audioEngine.playJoinSound();
 
     // Start live microphone detection
@@ -7283,7 +8713,8 @@ class VoiceController {
         avatarBg: me.avatarBg,
         avatarPhoto: me.avatarPhoto || null,
         isSpeaking: false,
-        isMuted: window.stateManager.state.isMuted
+        isMuted: window.stateManager.state.isMuted,
+        isHandRaised: false
       });
     }
 
@@ -7297,6 +8728,7 @@ class VoiceController {
 
     window.stateManager.saveState();
     window.uiController.updateVoiceConnectionUI(true, channelName, guildName);
+    window.uiController.showMeetStage(true, channelName, guildName);
   }
 
   leaveVoice(playSound = true) {
@@ -7306,6 +8738,8 @@ class VoiceController {
     if (playSound) {
       window.audioEngine.playLeaveSound();
     }
+
+    this.stopCallTimer();
 
     // Broadcast voice leave to other real students
     if (window.networkEngine) {
@@ -7329,10 +8763,154 @@ class VoiceController {
     }
 
     window.stateManager.state.activeVoiceChannelId = null;
+    window.stateManager.state.activeStageChannelId = null;
     window.stateManager.state.isScreenSharing = false;
+    window.stateManager.state.isHandRaised = false;
     window.stateManager.saveState();
 
     window.uiController.updateVoiceConnectionUI(false);
+    window.uiController.showMeetStage(false);
+  }
+
+  toggleHandRaise() {
+    const isRaised = !window.stateManager.state.isHandRaised;
+    window.stateManager.state.isHandRaised = isRaised;
+
+    // Update in participant list
+    const chId = window.stateManager.state.activeVoiceChannelId;
+    if (chId && window.stateManager.state.voiceParticipants[chId]) {
+      const me = window.stateManager.state.voiceParticipants[chId].find(p => p.id === window.stateManager.state.currentUser.id);
+      if (me) me.isHandRaised = isRaised;
+    }
+
+    // Play pleasant notification sound
+    if (isRaised) {
+      if (window.audioEngine.playJoinSound) window.audioEngine.playJoinSound();
+      this.sendInCallMessage(`✋ ${window.stateManager.state.currentUser.name} raised hand`);
+    }
+
+    window.stateManager.saveState();
+    window.uiController.renderMeetStage();
+  }
+
+  sendReaction(emoji) {
+    window.uiController.spawnFloatingReaction(emoji);
+    
+    // Play light pop sound
+    if ('AudioContext' in window || 'webkitAudioContext' in window) {
+      try {
+        const ctx = new (window.AudioContext || window.webkitAudioContext)();
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(540, ctx.currentTime);
+        osc.frequency.exponentialRampToValueAtTime(880, ctx.currentTime + 0.12);
+        gain.gain.setValueAtTime(0.15, ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.12);
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start();
+        osc.stop(ctx.currentTime + 0.12);
+      } catch (e) {}
+    }
+
+    // Close reactions tray
+    const tray = document.getElementById('meet-reactions-tray');
+    if (tray) tray.style.display = 'none';
+
+    if (window.networkEngine) {
+      window.networkEngine.broadcastReaction?.(emoji);
+    }
+  }
+
+  toggleMeetViewMode(mode) {
+    window.stateManager.state.meetViewMode = mode;
+    window.stateManager.saveState();
+    window.uiController.renderMeetStage();
+  }
+
+  toggleInCallDrawer(tab) {
+    const current = window.stateManager.state.inCallDrawerOpen;
+    window.stateManager.state.inCallDrawerOpen = current === tab ? null : tab;
+    window.stateManager.saveState();
+    window.uiController.renderMeetStage();
+  }
+
+  zoomPresentationDoc(delta) {
+    let current = window.stateManager.state.docZoom || 100;
+    current = Math.min(160, Math.max(70, current + delta));
+    window.stateManager.state.docZoom = current;
+    window.stateManager.saveState();
+    
+    const paper = document.getElementById('meet-doc-paper');
+    const zoomLabel = document.getElementById('meet-doc-zoom-label');
+    if (paper) paper.style.transform = `scale(${current / 100})`;
+    if (zoomLabel) zoomLabel.textContent = `${current}%`;
+  }
+
+  toggleLaserPointer() {
+    this.isLaserActive = !this.isLaserActive;
+    window.uiController.renderMeetStage();
+  }
+
+  async togglePiP() {
+    try {
+      const vid = document.querySelector('.meet-video-screen');
+      if (vid) {
+        if (document.pictureInPictureElement) {
+          await document.exitPictureInPicture();
+        } else if (document.pictureInPictureEnabled) {
+          await vid.requestPictureInPicture();
+        }
+      }
+    } catch (e) {
+      console.warn('[UniCord PiP] Picture-in-picture error:', e);
+    }
+  }
+
+  toggleFitMode() {
+    const vid = document.querySelector('.meet-video-screen');
+    if (!vid) return;
+    const current = vid.style.objectFit || 'contain';
+    vid.style.objectFit = current === 'contain' ? 'cover' : 'contain';
+    const label = document.getElementById('screenshare-fit-label');
+    if (label) label.textContent = vid.style.objectFit === 'cover' ? 'Fill' : 'Fit';
+  }
+
+  sendInCallMessage(text) {
+    if (!text || !text.trim()) return;
+    const msg = {
+      id: 'im-' + Date.now(),
+      author: window.stateManager.state.currentUser.name,
+      time: this.getFormattedTime(),
+      text: text.trim()
+    };
+    if (!window.stateManager.state.inCallMessages) {
+      window.stateManager.state.inCallMessages = [];
+    }
+    window.stateManager.state.inCallMessages.push(msg);
+    window.stateManager.saveState();
+    window.uiController.renderMeetStage();
+
+    // Auto response from Sourabh Singh or classmates if a question is asked
+    if (text.includes('?') || text.toLowerCase().includes('sir')) {
+      setTimeout(() => {
+        const answers = [
+          "Good question! As highlighted on page 9, consent management architecture is decentralized.",
+          "Check the second paragraph under API Architecture, it mentions third-party aggregator tokens.",
+          "Exactly right. We will explore Fraud and Regulations in the next slide."
+        ];
+        const ans = answers[Math.floor(Math.random() * answers.length)];
+        window.stateManager.state.inCallMessages.push({
+          id: 'im-reply-' + Date.now(),
+          author: 'Sourabh Singh',
+          time: this.getFormattedTime(),
+          text: ans
+        });
+        window.stateManager.saveState();
+        window.uiController.renderMeetStage();
+      }, 2200);
+    }
   }
 
   toggleMute() {
@@ -7557,13 +9135,21 @@ class VoiceController {
     if ('speechSynthesis' in window) {
       window.speechSynthesis.cancel(); // Stop any pending speech
 
-      const phrases = [
+      let phrases = [
         "Hey! Can you hear me clearly in this voice channel?",
         "Yeah, my microphone is working! The voice quality sounds great.",
-        "Hey Alex! I'm here in the channel, what are we working on?",
         "Testing, one two three. Can everyone in the voice room hear this?",
         "Audio is crystal clear on my end too!"
       ];
+      if (speaker.name === 'Sourabh Singh' || speaker.isPresenter) {
+        phrases = [
+          "As shown on page 9, API consent architecture protects sensitive banking credentials.",
+          "An API connects two independent systems in a structured and audited way.",
+          "Next up in Fintech Ecosystem: Risk, Fraud and Regulation framework.",
+          "Can everyone see the Fintech presentation notes on screen?",
+          "Notice how third-party apps only receive authorized token data, never raw passwords."
+        ];
+      }
       const phrase = phrases[Math.floor(Math.random() * phrases.length)];
       const utter = new SpeechSynthesisUtterance(phrase);
 
@@ -8683,6 +10269,21 @@ class UIController {
     if (modal) modal.style.display = 'none';
   }
 
+  getSafeAvatarInitials(user) {
+    if (!user) return '?';
+    if (user.shortInitials) return user.shortInitials;
+    if (user.isOthersTile) return '+29';
+    if (user.avatarText && user.avatarText.length <= 2 && !user.avatarText.startsWith('#')) {
+      return user.avatarText;
+    }
+    const cleanName = (user.name || '').replace(/\(You\)/g, '').trim();
+    const parts = cleanName.split(/\s+/);
+    if (parts.length >= 2) {
+      return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+    }
+    return cleanName.substring(0, 2).toUpperCase() || 'U';
+  }
+
   // ================= 1-ON-1 DIRECT CALLING =================
   startDirectCall(friendId, friendName, avatarText, avatarBg, isVideo = false) {
     this.activeCallFriend = { id: friendId, name: friendName, avatarText, avatarBg, isVideo };
@@ -9029,7 +10630,7 @@ class UIController {
               const avatarStyle = hasPhoto
                 ? `background-image: url('${p.avatarPhoto}'); background-size: cover; background-position: center; border: none;`
                 : `background-color: ${p.avatarBg || '#5865F2'};`;
-              const avatarContent = hasPhoto ? '' : (p.avatarText || p.name.charAt(0));
+              const avatarContent = hasPhoto ? '' : this.getSafeAvatarInitials(p);
 
               vRow.innerHTML = `
                 <div class="voice-member-avatar ${p.isSpeaking ? 'speaking' : ''}" style="${avatarStyle}">
@@ -9511,6 +11112,601 @@ class UIController {
     });
   }
 
+  // 7B. Render Google Meet & Conference Stage Viewport
+  showMeetStage(show, channelName = '', guildName = '') {
+    const stageViewport = document.getElementById('meet-stage-viewport');
+    const chatViewport = document.getElementById('chat-viewport');
+    const friendsViewport = document.getElementById('friends-viewport');
+    const membersSidebar = document.getElementById('members-sidebar');
+    const btnNavStage = document.getElementById('btn-toggle-meet-stage');
+    const miniDock = document.getElementById('meet-mini-dock');
+
+    if (!stageViewport) return;
+
+    if (show) {
+      stageViewport.style.display = 'flex';
+      if (chatViewport) chatViewport.style.display = 'none';
+      if (friendsViewport) friendsViewport.style.display = 'none';
+      if (membersSidebar) membersSidebar.style.display = 'none';
+      if (btnNavStage) btnNavStage.classList.add('active');
+      if (miniDock) miniDock.style.display = 'none';
+
+      const titleEl = document.getElementById('meet-room-title');
+      if (titleEl) {
+        titleEl.textContent = channelName || '24/7 Study Room';
+      }
+      this.renderMeetStage();
+    } else {
+      stageViewport.style.display = 'none';
+      if (chatViewport) chatViewport.style.display = 'flex';
+      if (membersSidebar) membersSidebar.style.display = 'flex';
+      if (btnNavStage) btnNavStage.classList.remove('active');
+
+      // If still connected to voice, show mini dock so user knows call is active
+      const inVoice = !!window.stateManager.state.activeVoiceChannelId;
+      if (miniDock) {
+        miniDock.style.display = inVoice ? 'flex' : 'none';
+        const miniText = document.getElementById('meet-mini-channel-text');
+        if (miniText && inVoice) {
+          miniText.textContent = `Connected: ${channelName || '24/7 Study Room'} (Sourabh Singh presenting)`;
+        }
+      }
+    }
+  }
+
+  toggleMeetStageView() {
+    const stageViewport = document.getElementById('meet-stage-viewport');
+    const inVoice = !!window.stateManager.state.activeVoiceChannelId;
+    if (inVoice) {
+      const isVisible = stageViewport && stageViewport.style.display === 'flex';
+      this.showMeetStage(!isVisible);
+    } else {
+      // Auto-join 24/7 study room
+      window.voiceController.joinVoice('chan-voice-study', '24/7 Study Room', 'Apex University Hub');
+    }
+  }
+
+  spawnFloatingReaction(emoji) {
+    const container = document.getElementById('meet-reactions-overlay');
+    if (!container) return;
+    const item = document.createElement('div');
+    item.className = 'floating-reaction-item';
+    item.textContent = emoji;
+    const startLeft = 32 + Math.random() * 36; // 32% - 68%
+    item.style.left = startLeft + '%';
+    container.appendChild(item);
+    setTimeout(() => {
+      item.remove();
+    }, 3200);
+  }
+
+  initLaserPointerCanvas(canvas, container) {
+    if (!canvas || !container) return;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    const resize = () => {
+      canvas.width = container.clientWidth || 800;
+      canvas.height = container.clientHeight || 600;
+    };
+    resize();
+
+    let points = [];
+
+    const onMouseMove = (e) => {
+      const rect = container.getBoundingClientRect();
+      const x = e.clientX - rect.left;
+      const y = e.clientY - rect.top;
+      points.push({ x, y, time: Date.now() });
+      if (points.length > 30) points.shift();
+    };
+
+    container.onmousemove = onMouseMove;
+
+    const render = () => {
+      if (!window.voiceController?.isLaserActive || !document.contains(canvas)) {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        return;
+      }
+
+      const now = Date.now();
+      points = points.filter(p => now - p.time < 600);
+
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      if (points.length > 1) {
+        ctx.save();
+        for (let i = 1; i < points.length; i++) {
+          const p1 = points[i - 1];
+          const p2 = points[i];
+          const age = now - p2.time;
+          const alpha = Math.max(0, 1 - age / 600);
+
+          ctx.beginPath();
+          ctx.moveTo(p1.x, p1.y);
+          ctx.lineTo(p2.x, p2.y);
+          ctx.strokeStyle = `rgba(255, 59, 48, ${alpha * 0.85})`;
+          ctx.lineWidth = 4 * alpha;
+          ctx.lineCap = 'round';
+          ctx.stroke();
+        }
+        ctx.restore();
+      }
+
+      if (points.length > 0) {
+        const last = points[points.length - 1];
+        ctx.save();
+        // Laser outer glowing aura
+        const gradient = ctx.createRadialGradient(last.x, last.y, 0, last.x, last.y, 16);
+        gradient.addColorStop(0, 'rgba(255, 68, 68, 0.95)');
+        gradient.addColorStop(0.35, 'rgba(255, 20, 40, 0.55)');
+        gradient.addColorStop(1, 'rgba(255, 0, 0, 0)');
+        ctx.fillStyle = gradient;
+        ctx.beginPath();
+        ctx.arc(last.x, last.y, 16, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Laser core white-hot dot
+        ctx.fillStyle = '#ffffff';
+        ctx.beginPath();
+        ctx.arc(last.x, last.y, 3.5, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+      }
+
+      requestAnimationFrame(render);
+    };
+
+    requestAnimationFrame(render);
+  }
+
+  renderMeetStage() {
+    const stageViewport = document.getElementById('meet-stage-viewport');
+    const body = document.getElementById('meet-stage-body');
+    const chId = window.stateManager.state.activeVoiceChannelId;
+    if (!stageViewport || !body || !chId) return;
+
+    const state = window.stateManager.state;
+    const participants = state.voiceParticipants[chId] || [];
+    const isScreenSharing = state.isScreenSharing;
+    const isMuted = state.isMuted;
+    const isCameraOn = window.voiceController?.isCameraOn;
+    const isHandRaised = state.isHandRaised;
+    const mode = state.meetViewMode || 'spotlight';
+
+    // 1. Update Header Buttons
+    const btnSpotlight = document.getElementById('btn-meet-mode-spotlight');
+    const btnGrid = document.getElementById('btn-meet-mode-grid');
+    if (btnSpotlight) btnSpotlight.classList.toggle('active', mode === 'spotlight');
+    if (btnGrid) btnGrid.classList.toggle('active', mode === 'grid');
+
+    // 2. Update Dock Controls
+    const dockMic = document.getElementById('btn-dock-mic');
+    if (dockMic) {
+      dockMic.classList.toggle('muted', isMuted);
+      const onIcon = dockMic.querySelector('.dock-mic-on');
+      const offIcon = dockMic.querySelector('.dock-mic-off');
+      if (onIcon) onIcon.style.display = isMuted ? 'none' : 'block';
+      if (offIcon) offIcon.style.display = isMuted ? 'block' : 'none';
+    }
+
+    const dockCam = document.getElementById('btn-dock-camera');
+    if (dockCam) {
+      dockCam.classList.toggle('active-blue', isCameraOn);
+    }
+
+    const dockScreen = document.getElementById('btn-dock-screenshare');
+    if (dockScreen) {
+      dockScreen.classList.toggle('active-blue', isScreenSharing);
+    }
+
+    const dockHand = document.getElementById('btn-dock-raise-hand');
+    if (dockHand) {
+      dockHand.classList.toggle('hand-raised', isHandRaised);
+    }
+
+    const dockPeopleBadge = document.getElementById('meet-dock-people-badge');
+    if (dockPeopleBadge) {
+      dockPeopleBadge.textContent = '34';
+    }
+
+    body.innerHTML = '';
+
+    // 3. Render Based on View Mode
+    if (mode === 'grid') {
+      // Gallery / Grid Mode
+      const gridContainer = document.createElement('div');
+      gridContainer.className = 'meet-grid-view';
+
+      participants.forEach(p => {
+        if (p.isOthersTile) {
+          const othersTile = document.createElement('div');
+          othersTile.className = 'meet-tile-others';
+          othersTile.onclick = () => window.voiceController.toggleInCallDrawer('people');
+          othersTile.innerHTML = `
+            <div class="meet-avatar-stack">
+              <div class="meet-avatar-stack-item" style="background:#f0b232;">AK</div>
+              <div class="meet-avatar-stack-item" style="background:#5865f2;">SM</div>
+              <div class="meet-avatar-stack-item" style="background:#23a55a;">${p.count || 29}</div>
+            </div>
+            <div class="meet-others-label">${p.name || '29 others'}</div>
+          `;
+          gridContainer.appendChild(othersTile);
+          return;
+        }
+
+        const tile = document.createElement('div');
+        tile.className = `meet-tile ${p.isSpeaking ? 'speaking' : ''}`;
+        tile.id = `meet-tile-${p.id}`;
+
+        const hasPhoto = !!p.avatarPhoto;
+        const avatarStyle = hasPhoto
+          ? `background-image: url('${p.avatarPhoto}');`
+          : `background-color: ${p.avatarBg || '#5865F2'};`;
+        const avatarText = hasPhoto ? '' : (p.avatarText || p.name.charAt(0));
+
+        tile.innerHTML = `
+          <div class="meet-tile-avatar" style="${avatarStyle}">
+            ${avatarText}
+          </div>
+          <div class="meet-tile-name-pill">
+            ${p.isPresenter ? '📌' : ''} ${p.name}
+          </div>
+          <div class="meet-tile-mic-badge ${p.isMuted ? 'muted' : ''}">
+            ${p.isMuted 
+              ? '<svg viewBox="0 0 24 24" width="12" height="12"><path fill="#ffffff" d="M19 11h-1.7c0 .74-.16 1.43-.43 2.05l1.23 1.23c.56-.98.9-2.09.9-3.28zm-4.02.17c0-.06.02-.11.02-.17V5c0-1.66-1.34-3-3-3S9 3.34 9 5v.18l5.98 5.99zM4.27 3L3 4.27l6.01 6.01V11c0 1.66 1.33 3 2.99 3 .22 0 .44-.03.65-.08l1.66 1.66c-.71.33-1.5.52-2.31.52-2.76 0-5.3-2.24-5.3-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c1.33-.19 2.53-.74 3.53-1.54l3.2 3.2L21 18.27 4.27 3z"/></svg>' 
+              : '<svg viewBox="0 0 24 24" width="12" height="12"><path fill="#23a55a" d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z"/></svg>'}
+          </div>
+          ${p.isHandRaised ? '<div class="meet-hand-raised-badge">✋</div>' : ''}
+        `;
+        tile.onclick = (e) => this.openMemberProfilePopover(p, e);
+        gridContainer.appendChild(tile);
+      });
+
+      body.appendChild(gridContainer);
+    } else {
+      // Spotlight Mode (Google Meet Presentation Layout as in user screenshot)
+      
+      // A. Main Spotlight Area (Left)
+      const spotlight = document.createElement('div');
+      spotlight.className = 'meet-spotlight-area';
+
+      // Top Presentation Bar (Google Docs / Meet Shell)
+      const banner = document.createElement('div');
+      banner.className = 'meet-presentation-banner';
+      banner.innerHTML = `
+        <div class="meet-banner-top-row">
+          <div class="meet-presenter-badge">
+            <div class="meet-presenter-avatar-small">#चौ</div>
+            <div class="meet-presenter-label">Sourabh Singh <span class="meet-presenting-subtag">(Presenting)</span></div>
+            <svg viewBox="0 0 24 24" width="16" height="16" style="color:#bdc1c6; margin-left:4px;"><path fill="currentColor" d="M16 12V4h1V2H7v2h1v8l-2 2v2h5.2v6h1.6v-6H18v-2l-2-2z"/></svg>
+          </div>
+
+          <div style="display:flex; align-items:center; gap:8px;">
+            <button class="meet-view-switch-btn ${!isScreenSharing ? 'active' : ''}" onclick="window.voiceController.stopScreenShare()" style="padding:3px 10px; font-size:11px;">
+              📄 Notes.docx
+            </button>
+            <button class="meet-view-switch-btn ${isScreenSharing ? 'active' : ''}" onclick="window.voiceController.toggleScreenShare()" style="padding:3px 10px; font-size:11px;">
+              🖥️ Screen Share
+            </button>
+            <button class="meet-view-switch-btn" onclick="window.whiteboardController?.openModal()" style="padding:3px 10px; font-size:11px;">
+              🎨 Whiteboard
+            </button>
+          </div>
+        </div>
+
+        <div class="meet-doc-shell-menubar">
+          <div class="meet-doc-title-group">
+            <div class="meet-doc-icon">
+              <svg viewBox="0 0 24 24" width="18" height="18"><path fill="#4285f4" d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6zm-1 7V3.5L18.5 9H13z"/></svg>
+            </div>
+            <div class="meet-doc-title-text">Fintech Ecosystem Notes.docx</div>
+            <div class="meet-doc-menu-list">
+              <span class="meet-doc-menu-item">File</span>
+              <span class="meet-doc-menu-item">Edit</span>
+              <span class="meet-doc-menu-item">View</span>
+              <span class="meet-doc-menu-item">Tools</span>
+              <span class="meet-doc-menu-item">Help</span>
+            </div>
+          </div>
+
+          <div class="meet-doc-tools-right">
+            <button class="meet-open-docs-btn" onclick="window.open('https://docs.google.com', '_blank')">
+              <svg viewBox="0 0 24 24" width="14" height="14"><path fill="#1a73e8" d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6zm-1 7V3.5L18.5 9H13z"/></svg>
+              <span>Open with Google Docs ▾</span>
+            </button>
+            <div class="nav-divider" style="height:14px; margin:0 4px;"></div>
+            <span class="meet-doc-page-badge">Page 9 / 18</span>
+            <button class="meet-doc-tool-btn" onclick="window.voiceController.zoomPresentationDoc(-10)" title="Zoom Out">-</button>
+            <span style="font-size:12px; color:#bdc1c6; font-family:var(--font-code);" id="meet-doc-zoom-label">${state.docZoom || 100}%</span>
+            <button class="meet-doc-tool-btn" onclick="window.voiceController.zoomPresentationDoc(10)" title="Zoom In">+</button>
+            <button class="meet-doc-tool-btn meet-laser-toggle-btn ${window.voiceController?.isLaserActive ? 'active' : ''}" onclick="window.voiceController.toggleLaserPointer()" title="Interactive Laser Pointer">
+              🎯
+            </button>
+          </div>
+        </div>
+      `;
+      spotlight.appendChild(banner);
+
+      // Presentation Viewport (Doc or Video)
+      const viewport = document.createElement('div');
+      viewport.className = 'meet-presentation-viewport';
+
+      // Laser Pointer Canvas Overlay
+      const laserCanvas = document.createElement('canvas');
+      laserCanvas.className = 'meet-laser-canvas';
+      laserCanvas.id = 'meet-laser-canvas';
+      viewport.appendChild(laserCanvas);
+
+      if (isScreenSharing && window.voiceController?.screenStream) {
+        // High-Tech Screenshare HUD Overlay
+        const hud = document.createElement('div');
+        hud.className = 'screenshare-hud-overlay';
+        hud.innerHTML = `
+          <div class="screenshare-telemetry-pill">
+            <div class="screenshare-live-pulse"></div>
+            <span>LIVE SCREENSHARE • 1080p @ 60 FPS • WebRTC HD • 4.8 Mbps</span>
+          </div>
+          <div class="screenshare-hud-buttons">
+            <button class="screenshare-pill-btn ${window.voiceController?.isLaserActive ? 'active' : ''}" onclick="window.voiceController.toggleLaserPointer()">
+              🎯 Laser Pointer
+            </button>
+            <button class="screenshare-pill-btn" onclick="window.voiceController.togglePiP()">
+              🪟 Picture-in-Picture
+            </button>
+            <button class="screenshare-pill-btn" onclick="window.voiceController.toggleFitMode()" id="screenshare-fit-label">
+              Fit
+            </button>
+            <button class="screenshare-pill-btn danger" onclick="window.voiceController.stopScreenShare()">
+              ⏹ Stop Sharing
+            </button>
+          </div>
+        `;
+        viewport.appendChild(hud);
+
+        const vid = document.createElement('video');
+        vid.className = 'meet-video-screen';
+        vid.muted = true;
+        vid.autoplay = true;
+        vid.playsInline = true;
+        vid.srcObject = window.voiceController.screenStream;
+        vid.onloadedmetadata = () => vid.play().catch(e => console.warn(e));
+        viewport.appendChild(vid);
+      } else {
+        // Document Paper View (Matching screenshot)
+        const paper = document.createElement('div');
+        paper.className = 'meet-doc-paper';
+        paper.id = 'meet-doc-paper';
+        paper.style.transform = `scale(${(state.docZoom || 100) / 100})`;
+        paper.innerHTML = `
+          <p style="color:#5f6368; font-size:13px; margin-bottom:14px; font-style:italic;">
+            ...exactly the practical skill this unit is building toward, because it is precisely what a real analyst does before recommending that a company either partner with, or instead compete directly against, any given FinTech player in the market
+          </p>
+
+          <h3 style="font-size:18px; font-weight:700; color:#1a73e8; margin-top:16px; margin-bottom:10px;">
+            API and Consent Architecture
+          </h3>
+          <p>
+            An API, or Application Programming Interface, is simply a technical connection that lets two separate pieces of software talk to each other and exchange data in a structured, secure, and clearly defined way, and in FinTech specifically, APIs are what allow one company's app to securely pull your financial data from an entirely different institution, such as your bank, without ever exposing your actual login credentials to that second company directly.
+          </p>
+          <p>
+            Consent architecture is the closely related layer of systems and permissions that specifically ensures this kind of sensitive data-sharing only ever happens with your own explicit, informed permission, and that you retain the ability to see exactly what data is being shared, with which specific companies, and to revoke that permission again at any time you choose to.
+          </p>
+          <div class="highlight-box">
+            <strong>Key Mechanism:</strong> When a budgeting app shows you a combined, consolidated view of transactions from three or four completely different bank accounts you personally hold, all in one single screen, that convenience is only possible because of exactly this API and consent architecture working correctly and securely together behind the scenes.
+          </div>
+
+          <h3 style="font-size:18px; font-weight:700; color:#202124; margin-top:34px; margin-bottom:10px;">
+            Day 6: Risk, Fraud and Regulation in FinTech
+          </h3>
+          <p>
+            Today explains why a genuinely great FinTech idea can still fail completely without the right risk architecture and regulatory frameworks in place. Digital payments, tokenization, and customer authorization protocols rely heavily on audited data pipelines to prevent identity takeover and synthetic fraud.
+          </p>
+        `;
+        viewport.appendChild(paper);
+
+        // Floating Bottom-Right Inspection Capsule (Google Docs Style)
+        const capsule = document.createElement('div');
+        capsule.className = 'meet-doc-floating-capsule';
+        capsule.innerHTML = `
+          <button class="meet-doc-tool-btn" onclick="window.voiceController.zoomPresentationDoc(-10)" title="Zoom Out">🔍 -</button>
+          <span style="font-size:12px; font-family:var(--font-code); color:#e8eaed;">${state.docZoom || 100}%</span>
+          <button class="meet-doc-tool-btn" onclick="window.voiceController.zoomPresentationDoc(10)" title="Zoom In">🔍 +</button>
+          <div class="nav-divider" style="height:12px;"></div>
+          <button class="meet-doc-tool-btn" onclick="window.print()" title="Print Notes">🖨️</button>
+          <button class="meet-doc-tool-btn" onclick="document.getElementById('meet-stage-viewport')?.requestFullscreen?.()" title="Full Screen">⛶</button>
+        `;
+        viewport.appendChild(capsule);
+      }
+
+      // Attach laser pointer interactive trail
+      if (window.voiceController?.isLaserActive) {
+        viewport.classList.add('meet-laser-active-cursor');
+        this.initLaserPointerCanvas(laserCanvas, viewport);
+      } else {
+        viewport.classList.remove('meet-laser-active-cursor');
+      }
+
+      spotlight.appendChild(viewport);
+      body.appendChild(spotlight);
+
+      // B. Right Participants Sidebar
+      const sidebar = document.createElement('div');
+      sidebar.className = 'meet-participants-sidebar';
+
+      // 1. Top Presenter Card
+      const presenter = participants.find(p => p.name === 'Sourabh Singh' || p.isPresenter) || {
+        id: 'p-sourabh',
+        name: 'Sourabh Singh',
+        avatarText: 'SS',
+        shortInitials: 'SS',
+        handle: '#चौधरी',
+        avatarBg: '#3c4043',
+        isSpeaking: true,
+        isMuted: false
+      };
+
+      const presenterCard = document.createElement('div');
+      presenterCard.className = `meet-presenter-card ${presenter.isSpeaking ? 'speaking' : ''}`;
+      presenterCard.id = `meet-tile-${presenter.id}`;
+      presenterCard.innerHTML = `
+        <div class="meet-audio-wave">
+          <div class="wave-bar"></div>
+          <div class="wave-bar"></div>
+          <div class="wave-bar"></div>
+        </div>
+        <div class="meet-presenter-avatar-large">
+          ${this.getSafeAvatarInitials(presenter)}
+        </div>
+        <div class="meet-tile-name-pill">
+          📌 ${presenter.name} ${presenter.handle || ''}
+        </div>
+      `;
+      presenterCard.onclick = (e) => this.openMemberProfilePopover(presenter, e);
+      sidebar.appendChild(presenterCard);
+
+      // 2. Bottom 2x2 Grid
+      const grid = document.createElement('div');
+      grid.className = 'meet-participants-grid';
+
+      // Other participants except presenter
+      const others = participants.filter(p => p.id !== presenter.id);
+
+      others.forEach(p => {
+        if (p.isOthersTile) {
+          const othersTile = document.createElement('div');
+          othersTile.className = 'meet-tile-others';
+          othersTile.onclick = () => window.voiceController.toggleInCallDrawer('people');
+          othersTile.innerHTML = `
+            <div class="meet-avatar-stack">
+              <div class="meet-avatar-stack-item" style="background:#1f3a60;">RJ</div>
+              <div class="meet-avatar-stack-item" style="background:#234938;">AG</div>
+              <div class="meet-avatar-stack-item" style="background:#543b18;">RH</div>
+            </div>
+            <div class="meet-others-label">${p.name || '29 others'}</div>
+          `;
+          grid.appendChild(othersTile);
+          return;
+        }
+
+        const tile = document.createElement('div');
+        tile.className = `meet-tile ${p.isSpeaking ? 'speaking' : ''}`;
+        tile.id = `meet-tile-${p.id}`;
+
+        const hasPhoto = !!p.avatarPhoto;
+        const avatarStyle = hasPhoto
+          ? `background-image: url('${p.avatarPhoto}');`
+          : `background-color: ${p.avatarBg || '#5865F2'};`;
+        const avatarText = hasPhoto ? '' : this.getSafeAvatarInitials(p);
+
+        tile.innerHTML = `
+          <div class="meet-tile-avatar" style="${avatarStyle}">
+            ${avatarText}
+          </div>
+          <div class="meet-tile-name-pill">
+            ${p.name}
+          </div>
+          <div class="meet-tile-mic-badge ${p.isMuted ? 'muted' : ''}">
+            ${p.isMuted 
+              ? '<svg viewBox="0 0 24 24" width="12" height="12"><path fill="#ffffff" d="M19 11h-1.7c0 .74-.16 1.43-.43 2.05l1.23 1.23c.56-.98.9-2.09.9-3.28zm-4.02.17c0-.06.02-.11.02-.17V5c0-1.66-1.34-3-3-3S9 3.34 9 5v.18l5.98 5.99zM4.27 3L3 4.27l6.01 6.01V11c0 1.66 1.33 3 2.99 3 .22 0 .44-.03.65-.08l1.66 1.66c-.71.33-1.5.52-2.31.52-2.76 0-5.3-2.24-5.3-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c1.33-.19 2.53-.74 3.53-1.54l3.2 3.2L21 18.27 4.27 3z"/></svg>' 
+              : '<svg viewBox="0 0 24 24" width="12" height="12"><path fill="#23a55a" d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z"/></svg>'}
+          </div>
+          ${p.isHandRaised ? '<div class="meet-hand-raised-badge">✋</div>' : ''}
+        `;
+        tile.onclick = (e) => this.openMemberProfilePopover(p, e);
+        grid.appendChild(tile);
+      });
+
+      sidebar.appendChild(grid);
+      body.appendChild(sidebar);
+    }
+
+    // 4. In-Call Drawer Rendering
+    const drawer = document.getElementById('meet-side-drawer');
+    const drawerBody = document.getElementById('meet-drawer-body');
+    const drawerFooter = document.getElementById('meet-drawer-footer');
+    const tabChat = document.getElementById('tab-in-call-chat');
+    const tabPeople = document.getElementById('tab-in-call-people');
+
+    if (drawer && drawerBody) {
+      if (state.inCallDrawerOpen) {
+        drawer.style.display = 'flex';
+        const activeTab = state.inCallDrawerOpen;
+
+        if (tabChat) tabChat.classList.toggle('active', activeTab === 'chat');
+        if (tabPeople) tabPeople.classList.toggle('active', activeTab === 'people');
+
+        if (activeTab === 'chat') {
+          if (drawerFooter) drawerFooter.style.display = 'block';
+          drawerBody.innerHTML = '';
+          const msgs = state.inCallMessages || [];
+          msgs.forEach(m => {
+            const row = document.createElement('div');
+            row.className = 'meet-in-call-msg';
+            row.innerHTML = `
+              <div class="meet-in-call-author">
+                <span>${m.author}</span>
+                <span class="meet-in-call-time">${m.time}</span>
+              </div>
+              <div class="meet-in-call-text">${m.text}</div>
+            `;
+            drawerBody.appendChild(row);
+          });
+          drawerBody.scrollTop = drawerBody.scrollHeight;
+        } else if (activeTab === 'people') {
+          if (drawerFooter) drawerFooter.style.display = 'none';
+          drawerBody.innerHTML = `
+            <div style="font-size:12px; font-weight:700; color:#8ab4f8; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:8px;">
+              Meeting Participants (34)
+            </div>
+          `;
+
+          // Hand Raise Queue if any
+          const raised = participants.filter(p => p.isHandRaised);
+          if (raised.length > 0) {
+            const queueBox = document.createElement('div');
+            queueBox.style.background = 'rgba(251,188,4,0.12)';
+            queueBox.style.border = '1px solid rgba(251,188,4,0.3)';
+            queueBox.style.padding = '10px 12px';
+            queueBox.style.borderRadius = '8px';
+            queueBox.style.marginBottom = '12px';
+            queueBox.innerHTML = `
+              <div style="font-size:12px; font-weight:bold; color:#fbbc04; margin-bottom:6px;">✋ Hand Raised Queue (${raised.length})</div>
+              ${raised.map(r => `<div style="font-size:13px; color:#fff; display:flex; align-items:center; justify-content:space-between;"><span>${r.name}</span> <button onclick="window.voiceController.toggleHandRaise()" style="background:transparent; border:1px solid #fbbc04; color:#fbbc04; font-size:10px; border-radius:10px; padding:2px 6px; cursor:pointer;">Lower</button></div>`).join('')}
+            `;
+            drawerBody.appendChild(queueBox);
+          }
+
+          // Full Attendance List
+          participants.forEach(p => {
+            if (p.isOthersTile) return;
+            const pRow = document.createElement('div');
+            pRow.style.display = 'flex';
+            pRow.style.alignItems = 'center';
+            pRow.style.justifyContent = 'space-between';
+            pRow.style.padding = '8px 10px';
+            pRow.style.borderRadius = '8px';
+            pRow.style.background = 'rgba(255,255,255,0.03)';
+            pRow.innerHTML = `
+              <div style="display:flex; align-items:center; gap:8px;">
+                <div style="width:28px; height:28px; border-radius:50%; background:${p.avatarBg || '#5865F2'}; color:#fff; display:flex; align-items:center; justify-content:center; font-size:12px; font-weight:bold;">
+                  ${p.avatarText || p.name.charAt(0)}
+                </div>
+                <span style="font-size:13px; font-weight:600; color:#e8eaed;">${p.name} ${p.isPresenter ? '<span style="color:#8ab4f8; font-size:11px;">(Host)</span>' : ''}</span>
+              </div>
+              <span style="font-size:11px; color:${p.isMuted ? '#ea4335' : '#23a55a'}; font-weight:600;">
+                ${p.isMuted ? 'Muted' : 'Speaking'}
+              </span>
+            `;
+            drawerBody.appendChild(pRow);
+          });
+        }
+      } else {
+        drawer.style.display = 'none';
+      }
+    }
+  }
+
   // 8. Render Friends Tab
   renderFriends() {
     const list = document.getElementById('friends-cards-list');
@@ -9661,6 +11857,15 @@ class UIController {
         if (tag) tag.innerText = 'Connected';
       }
     }
+
+    const meetTile = document.getElementById('meet-tile-' + userId);
+    if (meetTile) {
+      if (isSpeaking) {
+        meetTile.classList.add('speaking');
+      } else {
+        meetTile.classList.remove('speaking');
+      }
+    }
   }
 
   updateVoiceCardMuteState(userId, isMuted) {
@@ -9789,7 +11994,10 @@ class UIController {
       } else {
         avatarEl.style.backgroundImage = 'none';
         avatarEl.style.backgroundColor = member.avatarBg || '#5865F2';
-        avatarEl.textContent = member.avatarText || member.name.substring(0, 2).toUpperCase();
+        const safeText = this.getSafeAvatarInitials(member);
+        avatarEl.textContent = safeText;
+        avatarEl.style.fontSize = safeText.length > 2 ? '18px' : '28px';
+        avatarEl.style.overflow = 'hidden';
       }
     }
 
@@ -9803,7 +12011,8 @@ class UIController {
     const usernameEl = document.getElementById('popover-username');
     const discEl = document.getElementById('popover-discriminator');
     if (usernameEl) usernameEl.textContent = member.name.replace(' (You)', '');
-    if (discEl) discEl.textContent = member.discriminator ? `#${member.discriminator}` : '#UniCord';
+    const handleTag = member.handle ? ` ${member.handle}` : (member.discriminator ? `#${member.discriminator}` : '#UniCord');
+    if (discEl) discEl.textContent = handleTag;
 
     // 5. Custom Status
     const customStatusEl = document.getElementById('popover-custom-status');
@@ -9834,6 +12043,28 @@ class UIController {
     // 8. Action button
     const btnDm = document.getElementById('popover-btn-dm');
     if (btnDm) {
+      // Remove any previously added stage join button
+      const oldStageBtn = document.getElementById('popover-btn-stage-join');
+      if (oldStageBtn) oldStageBtn.remove();
+
+      // Add prominent "Watch Stream / Join Voice Stage" button
+      const btnStage = document.createElement('button');
+      btnStage.id = 'popover-btn-stage-join';
+      btnStage.className = 'btn-primary';
+      btnStage.style.width = '100%';
+      btnStage.style.marginBottom = '8px';
+      btnStage.style.backgroundColor = '#23a55a';
+      btnStage.style.display = 'flex';
+      btnStage.style.alignItems = 'center';
+      btnStage.style.justifyContent = 'center';
+      btnStage.style.gap = '6px';
+      btnStage.innerHTML = `<span>📺 Join Stage & Watch Presentation</span>`;
+      btnStage.onclick = () => {
+        pop.style.display = 'none';
+        window.voiceController.joinVoice('chan-voice-lounge', 'Lounge (General)', 'Unicord Central');
+      };
+      btnDm.parentNode.insertBefore(btnStage, btnDm);
+
       const isSelf = member.id === window.stateManager.state.currentUser.id || member.name.includes('(You)');
       if (isSelf) {
         btnDm.textContent = '✏️ Edit Profile';
@@ -10315,6 +12546,113 @@ document.addEventListener('DOMContentLoaded', () => {
   if (sliderLofiVol) {
     sliderLofiVol.oninput = (e) => window.audioEngine.setLofiVolume(parseInt(e.target.value, 10) / 100);
   }
+
+  // 4B. Google Meet & Conference Stage Event Listeners
+  const btnToggleMeetStage = document.getElementById('btn-toggle-meet-stage');
+  if (btnToggleMeetStage) {
+    btnToggleMeetStage.onclick = () => window.uiController.toggleMeetStageView();
+  }
+
+  const btnMeetModeSpotlight = document.getElementById('btn-meet-mode-spotlight');
+  if (btnMeetModeSpotlight) {
+    btnMeetModeSpotlight.onclick = () => window.voiceController.toggleMeetViewMode('spotlight');
+  }
+
+  const btnMeetModeGrid = document.getElementById('btn-meet-mode-grid');
+  if (btnMeetModeGrid) {
+    btnMeetModeGrid.onclick = () => window.voiceController.toggleMeetViewMode('grid');
+  }
+
+  const btnMeetMinimize = document.getElementById('btn-meet-minimize');
+  if (btnMeetMinimize) {
+    btnMeetMinimize.onclick = () => window.uiController.showMeetStage(false);
+  }
+
+  const btnMeetFullscreen = document.getElementById('btn-meet-fullscreen');
+  if (btnMeetFullscreen) {
+    btnMeetFullscreen.onclick = () => {
+      const stage = document.getElementById('meet-stage-viewport');
+      if (!document.fullscreenElement) {
+        if (stage?.requestFullscreen) stage.requestFullscreen();
+      } else {
+        if (document.exitFullscreen) document.exitFullscreen();
+      }
+    };
+  }
+
+  // Floating Dock Buttons
+  const btnDockMic = document.getElementById('btn-dock-mic');
+  if (btnDockMic) btnDockMic.onclick = () => window.voiceController.toggleMute();
+
+  const btnDockCam = document.getElementById('btn-dock-camera');
+  if (btnDockCam) btnDockCam.onclick = () => window.voiceController.toggleCamera();
+
+  const btnDockScreen = document.getElementById('btn-dock-screenshare');
+  if (btnDockScreen) btnDockScreen.onclick = () => window.voiceController.toggleScreenShare();
+
+  const btnDockHand = document.getElementById('btn-dock-raise-hand');
+  if (btnDockHand) btnDockHand.onclick = () => window.voiceController.toggleHandRaise();
+
+  const btnDockWhiteboard = document.getElementById('btn-dock-whiteboard');
+  if (btnDockWhiteboard) btnDockWhiteboard.onclick = () => window.whiteboardController?.openModal();
+
+  const btnDockHangup = document.getElementById('btn-dock-hangup');
+  if (btnDockHangup) btnDockHangup.onclick = () => window.voiceController.leaveVoice();
+
+  const btnDockPeople = document.getElementById('btn-dock-people');
+  if (btnDockPeople) btnDockPeople.onclick = () => window.voiceController.toggleInCallDrawer('people');
+
+  const btnDockChat = document.getElementById('btn-dock-chat');
+  if (btnDockChat) btnDockChat.onclick = () => window.voiceController.toggleInCallDrawer('chat');
+
+  const btnCloseMeetDrawer = document.getElementById('btn-close-meet-drawer');
+  if (btnCloseMeetDrawer) btnCloseMeetDrawer.onclick = () => window.voiceController.toggleInCallDrawer(null);
+
+  const tabInCallChat = document.getElementById('tab-in-call-chat');
+  if (tabInCallChat) tabInCallChat.onclick = () => window.voiceController.toggleInCallDrawer('chat');
+
+  const tabInCallPeople = document.getElementById('tab-in-call-people');
+  if (tabInCallPeople) tabInCallPeople.onclick = () => window.voiceController.toggleInCallDrawer('people');
+
+  const btnSendInCall = document.getElementById('btn-send-in-call-msg');
+  const inputInCall = document.getElementById('meet-in-call-input');
+  const sendInCallHandler = () => {
+    if (inputInCall && inputInCall.value.trim()) {
+      window.voiceController.sendInCallMessage(inputInCall.value);
+      inputInCall.value = '';
+    }
+  };
+  if (btnSendInCall) btnSendInCall.onclick = sendInCallHandler;
+  if (inputInCall) {
+    inputInCall.onkeydown = (e) => {
+      if (e.key === 'Enter') sendInCallHandler();
+    };
+  }
+
+  // Reactions Tray
+  const btnDockReactions = document.getElementById('btn-dock-reactions');
+  const trayReactions = document.getElementById('meet-reactions-tray');
+  if (btnDockReactions && trayReactions) {
+    btnDockReactions.onclick = (e) => {
+      e.stopPropagation();
+      const isHidden = trayReactions.style.display === 'none';
+      trayReactions.style.display = isHidden ? 'flex' : 'none';
+    };
+  }
+
+  document.querySelectorAll('.meet-reaction-btn').forEach(btn => {
+    btn.onclick = () => {
+      const emoji = btn.dataset.emoji || btn.textContent.trim();
+      window.voiceController.sendReaction(emoji);
+    };
+  });
+
+  // Mini Dock Buttons
+  const btnMiniReturn = document.getElementById('btn-mini-return-stage');
+  if (btnMiniReturn) btnMiniReturn.onclick = () => window.uiController.showMeetStage(true);
+
+  const btnMiniLeave = document.getElementById('btn-mini-leave-voice');
+  if (btnMiniLeave) btnMiniLeave.onclick = () => window.voiceController.leaveVoice();
 
   // 5. Server Dropdown Menu
   const serverHeader = document.getElementById('server-header');

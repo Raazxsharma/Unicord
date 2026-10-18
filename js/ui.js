@@ -156,11 +156,41 @@ class UIController {
 
   constructor() {
     this.selectedMember = null;
+    this.isWhatsAppMode = localStorage.getItem('unicord_wa_mode') !== 'false';
+    this.activeAudioPlayer = null;
+    this.audioPlaybackSpeed = 1;
+    this.currentQuoteReply = null;
   }
 
   init() {
+    this.applyWhatsAppMode();
     this.renderAll();
     this.setupTheme();
+  }
+
+  toggleWhatsAppMode() {
+    this.isWhatsAppMode = !this.isWhatsAppMode;
+    localStorage.setItem('unicord_wa_mode', this.isWhatsAppMode);
+    this.applyWhatsAppMode();
+    this.renderMessages();
+  }
+
+  applyWhatsAppMode() {
+    const viewport = document.getElementById('chat-viewport');
+    const toggleBtn = document.getElementById('btn-toggle-wa-mode');
+    const msgInput = document.getElementById('message-input');
+    const ch = window.stateManager ? window.stateManager.getCurrentChannel() : null;
+
+    if (viewport) {
+      viewport.classList.toggle('whatsapp-mode', this.isWhatsAppMode);
+    }
+    if (toggleBtn) {
+      toggleBtn.classList.toggle('active', this.isWhatsAppMode);
+      toggleBtn.setAttribute('data-tooltip', this.isWhatsAppMode ? 'WhatsApp UI Active (Click to switch to Discord UI)' : 'Switch to WhatsApp UI');
+    }
+    if (msgInput) {
+      msgInput.placeholder = this.isWhatsAppMode ? 'Type a message' : (ch ? `Message #${ch.name}` : 'Message');
+    }
   }
 
   renderAll() {
@@ -500,9 +530,20 @@ class UIController {
     const msgs = window.stateManager.getChannelMessages(ch.id);
     stream.innerHTML = '';
 
+    if (this.isWhatsAppMode) {
+      const dateDiv = document.createElement('div');
+      dateDiv.className = 'wa-date-divider';
+      dateDiv.innerHTML = `<svg viewBox="0 0 24 24" width="13" height="13"><path fill="#8696a0" d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm3.1-9H8.9V6c0-1.71 1.39-3.1 3.1-3.1 1.71 0 3.1 1.39 3.1 3.1v2z"/></svg> <span>Messages are end-to-end encrypted • TODAY</span>`;
+      stream.appendChild(dateDiv);
+    }
+
+    const myName = window.stateManager.state.currentUser.name;
+    const waColors = ['#25d366', '#53bdeb', '#e542a3', '#f0b232', '#9c27b0', '#ff9800', '#00e676'];
+
     msgs.forEach((msg, idx) => {
+      const isMe = msg.author.name === myName || msg.author.name === myName + ' (You)' || msg.isMe;
       const item = document.createElement('div');
-      item.className = 'message-item';
+      item.className = 'message-item' + (this.isWhatsAppMode ? (isMe ? ' wa-outgoing' : ' wa-incoming') : '');
       item.setAttribute('data-msg-id', msg.id);
 
       const parsedHtml = window.MarkdownParser.parse(msg.content);
@@ -513,23 +554,67 @@ class UIController {
         : `background-color: ${msg.author.avatarBg || '#5865F2'};`;
       const avatarContent = hasPhoto ? '' : (msg.author.avatarText || msg.author.name.charAt(0));
 
-      item.innerHTML = `
-        <div class="message-avatar-wrap" style="cursor: pointer;" title="View Profile">
-          <div class="message-avatar" style="${avatarStyle}">
-            ${avatarContent}
+      // Calculate author color for WhatsApp incoming messages
+      let nameHash = 0;
+      for (let i = 0; i < msg.author.name.length; i++) nameHash += msg.author.name.charCodeAt(i);
+      const waAuthorColor = waColors[nameHash % waColors.length];
+
+      // Build Quoted Reply Box (if present)
+      let quotedHtml = '';
+      if (msg.replyTo) {
+        quotedHtml = `
+          <div class="wa-quoted-box">
+            <div class="wa-quoted-sender">${msg.replyTo.author || 'Member'}</div>
+            <div class="wa-quoted-snippet">${msg.replyTo.text || ''}</div>
           </div>
-        </div>
-        <div class="message-content-wrap">
+        `;
+      }
+
+      // Build Voice Note Card (if voice message)
+      let voiceNoteHtml = '';
+      if (msg.isVoiceNote || msg.audioUrl) {
+        const duration = msg.audioDuration || '0:08';
+        const waveBars = [8, 14, 20, 16, 24, 12, 18, 26, 20, 14, 22, 17, 28, 20, 12, 16, 22, 18, 14, 10, 16, 20, 14, 8];
+        voiceNoteHtml = `
+          <div class="wa-voice-card" id="wa-voice-${msg.id}">
+            <button class="wa-play-btn" onclick="window.uiController.playVoiceNote('${msg.id}', '${msg.audioUrl || ''}')" title="Play Voice Note">
+              <svg viewBox="0 0 24 24" width="20" height="20" class="play-icon"><path fill="currentColor" d="M8 5v14l11-7z"/></svg>
+              <svg viewBox="0 0 24 24" width="20" height="20" class="pause-icon" style="display:none;"><path fill="currentColor" d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>
+            </button>
+            <div class="wa-wave-container" onclick="window.uiController.playVoiceNote('${msg.id}', '${msg.audioUrl || ''}')">
+              ${waveBars.map(h => `<div class="wa-wave-bar" style="height: ${h}px;"></div>`).join('')}
+            </div>
+            <div class="wa-voice-info">
+              <span class="wa-voice-timer" id="timer-${msg.id}">${duration}</span>
+              <button class="wa-speed-btn" onclick="window.uiController.cycleAudioSpeed('${msg.id}')">1x</button>
+            </div>
+          </div>
+        `;
+      }
+
+      // Build WhatsApp inline meta (Time + Double Blue Checkmarks)
+      const metaHtml = `
+        <span class="wa-meta-row">
+          <span class="wa-time">${msg.timestamp || 'Just now'}</span>
+          ${isMe ? '<span class="wa-double-check" title="Read">✓✓</span>' : ''}
+        </span>
+      `;
+
+      if (this.isWhatsAppMode) {
+        item.innerHTML = `
+          ${!isMe ? `
           <div class="message-header">
-            <span class="message-username" style="cursor: pointer;" title="View Profile">${msg.author.name}</span>
+            <span class="message-username" style="color: ${waAuthorColor} !important;" title="View Profile">${msg.author.name}</span>
             ${msg.author.isBot ? '<span class="message-tag-badge">BOT</span>' : ''}
             ${msg.author.role ? `<span style="font-size:10px; background: rgba(255,255,255,0.08); padding: 1px 4px; border-radius: 3px; color: var(--text-muted);">${msg.author.role}</span>` : ''}
-            <span class="message-timestamp">${msg.timestamp}</span>
-          </div>
-          <div class="message-body">${parsedHtml}</div>
-          ${msg.image ? `<img src="${msg.image}" class="message-attachment-image" style="max-width: 300px; border-radius: 8px; margin-top: 8px;" alt="Attachment" />` : ''}
-          ${msg.attachment && msg.attachment.isImage ? `<img src="${msg.attachment.url}" class="message-attachment-image" style="max-width: 300px; border-radius: 8px; margin-top: 8px;" alt="Attachment" />` : ''}
-          ${msg.attachment && !msg.attachment.isImage ? `<div style="margin-top: 8px; padding: 12px; background: var(--bg-modifier-hover); border-radius: 4px; display: inline-block;">📄 <b>${msg.attachment.name}</b> (${msg.attachment.size})</div>` : ''}
+          </div>` : ''}
+          ${quotedHtml}
+          ${voiceNoteHtml}
+          ${msg.content ? `<div class="message-body">${parsedHtml}</div>` : ''}
+          ${msg.image ? `<img src="${msg.image}" class="message-attachment-image" style="max-width: 280px; border-radius: 8px; margin-top: 6px;" alt="Attachment" />` : ''}
+          ${msg.attachment && msg.attachment.isImage ? `<img src="${msg.attachment.url}" class="message-attachment-image" style="max-width: 280px; border-radius: 8px; margin-top: 6px;" alt="Attachment" />` : ''}
+          ${msg.attachment && !msg.attachment.isImage ? `<div style="margin-top: 6px; padding: 10px; background: rgba(0,0,0,0.2); border-radius: 6px; display: inline-block;">📄 <b>${msg.attachment.name}</b> (${msg.attachment.size})</div>` : ''}
+          ${metaHtml}
           <div class="reactions-row" id="reactions-${msg.id}">
             ${(msg.reactions || []).map(r => `
               <div class="reaction-pill ${r.reacted ? 'reacted' : ''}" onclick="window.uiController.toggleReaction('${msg.id}', '${r.emoji}')">
@@ -538,22 +623,66 @@ class UIController {
               </div>
             `).join('')}
           </div>
-        </div>
-        <div class="message-toolbar">
-          <button class="msg-tool-btn emoji-quick-btn" title="Like" onclick="window.uiController.toggleReaction('${msg.id}', '👍')">👍</button>
-          <button class="msg-tool-btn emoji-quick-btn" title="Love" onclick="window.uiController.toggleReaction('${msg.id}', '❤️')">❤️</button>
-          <button class="msg-tool-btn emoji-quick-btn" title="Laugh" onclick="window.uiController.toggleReaction('${msg.id}', '😂')">😂</button>
-          <button class="msg-tool-btn emoji-quick-btn" title="Fire" onclick="window.uiController.toggleReaction('${msg.id}', '🔥')">🔥</button>
-          <button class="msg-tool-btn emoji-quick-btn" title="Rocket" onclick="window.uiController.toggleReaction('${msg.id}', '🚀')">🚀</button>
-          <button class="msg-tool-btn" title="Reply" onclick="window.uiController.quoteReply('${msg.author.name}')">
-            <svg viewBox="0 0 24 24" width="18" height="18"><path fill="currentColor" d="M10 9V5l-7 7 7 7v-4.1c5 0 8.5 1.6 11 5.1-1-5-4-10-11-11z"/></svg>
-          </button>
-          ${msg.author.name === window.stateManager.state.currentUser.name || msg.author.name === window.stateManager.state.currentUser.name + ' (You)' ? `
-          <button class="msg-tool-btn delete-btn" title="Delete Message" onclick="window.uiController.deleteMessage('${msg.id}')">
-            <svg viewBox="0 0 24 24" width="16" height="16"><path fill="currentColor" d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>
-          </button>` : ''}
-        </div>
-      `;
+          <div class="message-toolbar">
+            <button class="msg-tool-btn emoji-quick-btn" title="Like" onclick="window.uiController.toggleReaction('${msg.id}', '👍')">👍</button>
+            <button class="msg-tool-btn emoji-quick-btn" title="Love" onclick="window.uiController.toggleReaction('${msg.id}', '❤️')">❤️</button>
+            <button class="msg-tool-btn emoji-quick-btn" title="Laugh" onclick="window.uiController.toggleReaction('${msg.id}', '😂')">😂</button>
+            <button class="msg-tool-btn emoji-quick-btn" title="Surprised" onclick="window.uiController.toggleReaction('${msg.id}', '😮')">😮</button>
+            <button class="msg-tool-btn" title="Reply" onclick="window.uiController.quoteReply('${msg.author.name}', '${(msg.content || '').replace(/'/g, "\\'")}')">
+              <svg viewBox="0 0 24 24" width="16" height="16"><path fill="currentColor" d="M10 9V5l-7 7 7 7v-4.1c5 0 8.5 1.6 11 5.1-1-5-4-10-11-11z"/></svg>
+            </button>
+            ${isMe ? `
+            <button class="msg-tool-btn delete-btn" title="Delete Message" onclick="window.uiController.deleteMessage('${msg.id}')">
+              <svg viewBox="0 0 24 24" width="15" height="15"><path fill="currentColor" d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>
+            </button>` : ''}
+          </div>
+        `;
+      } else {
+        // Discord Classic Mode
+        item.innerHTML = `
+          <div class="message-avatar-wrap" style="cursor: pointer;" title="View Profile">
+            <div class="message-avatar" style="${avatarStyle}">
+              ${avatarContent}
+            </div>
+          </div>
+          <div class="message-content-wrap">
+            <div class="message-header">
+              <span class="message-username" style="cursor: pointer;" title="View Profile">${msg.author.name}</span>
+              ${msg.author.isBot ? '<span class="message-tag-badge">BOT</span>' : ''}
+              ${msg.author.role ? `<span style="font-size:10px; background: rgba(255,255,255,0.08); padding: 1px 4px; border-radius: 3px; color: var(--text-muted);">${msg.author.role}</span>` : ''}
+              <span class="message-timestamp">${msg.timestamp}</span>
+            </div>
+            ${quotedHtml}
+            ${voiceNoteHtml}
+            ${msg.content ? `<div class="message-body">${parsedHtml}</div>` : ''}
+            ${msg.image ? `<img src="${msg.image}" class="message-attachment-image" style="max-width: 300px; border-radius: 8px; margin-top: 8px;" alt="Attachment" />` : ''}
+            ${msg.attachment && msg.attachment.isImage ? `<img src="${msg.attachment.url}" class="message-attachment-image" style="max-width: 300px; border-radius: 8px; margin-top: 8px;" alt="Attachment" />` : ''}
+            ${msg.attachment && !msg.attachment.isImage ? `<div style="margin-top: 8px; padding: 12px; background: var(--bg-modifier-hover); border-radius: 4px; display: inline-block;">📄 <b>${msg.attachment.name}</b> (${msg.attachment.size})</div>` : ''}
+            <div class="reactions-row" id="reactions-${msg.id}">
+              ${(msg.reactions || []).map(r => `
+                <div class="reaction-pill ${r.reacted ? 'reacted' : ''}" onclick="window.uiController.toggleReaction('${msg.id}', '${r.emoji}')">
+                  <span>${r.emoji}</span>
+                  <span>${r.count}</span>
+                </div>
+              `).join('')}
+            </div>
+          </div>
+          <div class="message-toolbar">
+            <button class="msg-tool-btn emoji-quick-btn" title="Like" onclick="window.uiController.toggleReaction('${msg.id}', '👍')">👍</button>
+            <button class="msg-tool-btn emoji-quick-btn" title="Love" onclick="window.uiController.toggleReaction('${msg.id}', '❤️')">❤️</button>
+            <button class="msg-tool-btn emoji-quick-btn" title="Laugh" onclick="window.uiController.toggleReaction('${msg.id}', '😂')">😂</button>
+            <button class="msg-tool-btn emoji-quick-btn" title="Fire" onclick="window.uiController.toggleReaction('${msg.id}', '🔥')">🔥</button>
+            <button class="msg-tool-btn emoji-quick-btn" title="Rocket" onclick="window.uiController.toggleReaction('${msg.id}', '🚀')">🚀</button>
+            <button class="msg-tool-btn" title="Reply" onclick="window.uiController.quoteReply('${msg.author.name}', '${(msg.content || '').replace(/'/g, "\\'")}')">
+              <svg viewBox="0 0 24 24" width="18" height="18"><path fill="currentColor" d="M10 9V5l-7 7 7 7v-4.1c5 0 8.5 1.6 11 5.1-1-5-4-10-11-11z"/></svg>
+            </button>
+            ${isMe ? `
+            <button class="msg-tool-btn delete-btn" title="Delete Message" onclick="window.uiController.deleteMessage('${msg.id}')">
+              <svg viewBox="0 0 24 24" width="16" height="16"><path fill="currentColor" d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>
+            </button>` : ''}
+          </div>
+        `;
+      }
 
       // Click avatar or username to view full profile popover
       const avWrap = item.querySelector('.message-avatar-wrap');
@@ -566,6 +695,91 @@ class UIController {
 
     if (container) {
       container.scrollTop = container.scrollHeight;
+    }
+  }
+
+  // WhatsApp Voice Note Playback Controller
+  playVoiceNote(msgId, audioUrl) {
+    const card = document.getElementById(`wa-voice-${msgId}`);
+    if (!card) return;
+
+    const playIcon = card.querySelector('.play-icon');
+    const pauseIcon = card.querySelector('.pause-icon');
+    const bars = card.querySelectorAll('.wa-wave-bar');
+
+    if (this.activeAudioPlayer && this.activeAudioPlayer.msgId === msgId) {
+      // Pause
+      this.activeAudioPlayer.audio.pause();
+      if (playIcon) playIcon.style.display = 'block';
+      if (pauseIcon) pauseIcon.style.display = 'none';
+      clearInterval(this.activeAudioPlayer.interval);
+      this.activeAudioPlayer = null;
+      return;
+    }
+
+    if (this.activeAudioPlayer) {
+      this.activeAudioPlayer.audio.pause();
+      clearInterval(this.activeAudioPlayer.interval);
+      const prevPlay = this.activeAudioPlayer.card.querySelector('.play-icon');
+      const prevPause = this.activeAudioPlayer.card.querySelector('.pause-icon');
+      if (prevPlay) prevPlay.style.display = 'block';
+      if (prevPause) prevPause.style.display = 'none';
+    }
+
+    let audio;
+    if (audioUrl) {
+      audio = new Audio(audioUrl);
+    } else {
+      if (window.audioEngine) window.audioEngine.playJoinSound();
+      audio = new Audio('data:audio/wav;base64,UklGRigAAABXQVZFZm10IBIAAAABAAEARKwAAIhYAQACABAAAABkYXRhAgAAAAEA');
+    }
+
+    audio.playbackRate = this.audioPlaybackSpeed || 1;
+    if (playIcon) playIcon.style.display = 'none';
+    if (pauseIcon) pauseIcon.style.display = 'block';
+
+    let barIdx = 0;
+    const interval = setInterval(() => {
+      if (barIdx < bars.length) {
+        bars[barIdx].classList.add('played');
+        barIdx++;
+      }
+    }, 280);
+
+    audio.onended = () => {
+      if (playIcon) playIcon.style.display = 'block';
+      if (pauseIcon) pauseIcon.style.display = 'none';
+      bars.forEach(b => b.classList.remove('played'));
+      clearInterval(interval);
+      this.activeAudioPlayer = null;
+    };
+
+    audio.play().catch(e => console.log('Audio autoplay prevented:', e));
+    this.activeAudioPlayer = { audio, msgId, card, interval };
+  }
+
+  cycleAudioSpeed(msgId) {
+    const card = document.getElementById(`wa-voice-${msgId}`);
+    if (!card) return;
+    const btn = card.querySelector('.wa-speed-btn');
+    if (!btn) return;
+
+    if (this.audioPlaybackSpeed === 1) this.audioPlaybackSpeed = 1.5;
+    else if (this.audioPlaybackSpeed === 1.5) this.audioPlaybackSpeed = 2;
+    else this.audioPlaybackSpeed = 1;
+
+    btn.textContent = `${this.audioPlaybackSpeed}x`;
+    if (this.activeAudioPlayer && this.activeAudioPlayer.audio) {
+      this.activeAudioPlayer.audio.playbackRate = this.audioPlaybackSpeed;
+    }
+  }
+
+  quoteReply(authorName, textSnippet = '') {
+    this.currentQuoteReply = { author: authorName, text: textSnippet.substring(0, 80) };
+    const msgInput = document.getElementById('message-input');
+    if (msgInput) {
+      msgInput.focus();
+      msgInput.placeholder = `Replying to ${authorName}...`;
     }
   }
 

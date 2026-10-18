@@ -159,6 +159,25 @@ document.addEventListener('DOMContentLoaded', () => {
     btnRemoveAttach.onclick = clearAttachmentPreview;
   }
 
+  // WhatsApp Mode Toggle Button
+  const btnToggleWaMode = document.getElementById('btn-toggle-wa-mode');
+  if (btnToggleWaMode) {
+    btnToggleWaMode.onclick = () => {
+      window.uiController.toggleWhatsAppMode();
+    };
+  }
+
+  const btnVoiceNote = document.getElementById('btn-voice-note');
+  const btnSendMessage = document.getElementById('btn-send-message');
+
+  const updateActionButtons = () => {
+    const hasContent = msgInput && msgInput.value.trim().length > 0;
+    if (btnSendMessage && btnVoiceNote) {
+      btnSendMessage.style.display = hasContent ? 'flex' : 'none';
+      btnVoiceNote.style.display = hasContent ? 'none' : 'flex';
+    }
+  };
+
   const sendMessage = () => {
     const text = msgInput.value.trim();
     if (!text && !currentAttachment) return;
@@ -167,6 +186,8 @@ document.addEventListener('DOMContentLoaded', () => {
     if (!ch) return;
 
     const me = window.stateManager.state.currentUser;
+    const nowTime = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
     const newMsg = {
       id: 'msg-' + Date.now(),
       author: {
@@ -177,15 +198,18 @@ document.addEventListener('DOMContentLoaded', () => {
         role: me.role,
         isBot: false
       },
-      timestamp: 'Just now',
+      timestamp: nowTime,
       content: text,
-      attachment: currentAttachment ? { ...currentAttachment } : null
+      attachment: currentAttachment ? { ...currentAttachment } : null,
+      replyTo: window.uiController.currentQuoteReply || null
     };
 
+    window.uiController.currentQuoteReply = null;
     window.stateManager.addMessage(ch.id, newMsg);
     msgInput.value = '';
     msgInput.style.height = 'auto';
     clearAttachmentPreview();
+    updateActionButtons();
 
     window.uiController.renderMessages();
 
@@ -208,10 +232,11 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     });
 
-    // Auto-expand textarea & typing indicator
+    // Auto-expand textarea & typing indicator & swap mic/send
     msgInput.addEventListener('input', () => {
       msgInput.style.height = 'auto';
       msgInput.style.height = Math.min(140, msgInput.scrollHeight) + 'px';
+      updateActionButtons();
       
       const ch = window.stateManager.getCurrentChannel();
       if (ch && window.networkEngine) {
@@ -220,10 +245,131 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  const btnSendMessage = document.getElementById('btn-send-message');
   if (btnSendMessage) {
     btnSendMessage.onclick = sendMessage;
   }
+
+  // WhatsApp Voice Note Recording with MediaRecorder
+  let mediaRecorder = null;
+  let audioChunks = [];
+  let recordingStartTime = 0;
+  let recordingInterval = null;
+  const waRecBar = document.getElementById('wa-recording-bar');
+  const waRecTime = document.getElementById('wa-rec-time');
+  const btnCancelRec = document.getElementById('btn-cancel-voice-record');
+  const btnSendRec = document.getElementById('btn-send-voice-record');
+
+  const startVoiceRecording = async () => {
+    audioChunks = [];
+    recordingStartTime = Date.now();
+    if (waRecBar) waRecBar.style.display = 'flex';
+    if (btnVoiceNote) btnVoiceNote.classList.add('recording');
+
+    recordingInterval = setInterval(() => {
+      const elapsed = Math.floor((Date.now() - recordingStartTime) / 1000);
+      const mins = Math.floor(elapsed / 60);
+      const secs = elapsed % 60;
+      if (waRecTime) waRecTime.textContent = `${mins}:${secs < 10 ? '0' : ''}${secs}`;
+    }, 500);
+
+    if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        mediaRecorder = new MediaRecorder(stream);
+        mediaRecorder.ondataavailable = (e) => {
+          if (e.data.size > 0) audioChunks.push(e.data);
+        };
+        mediaRecorder.start();
+      } catch (err) {
+        console.warn('Microphone permission not granted, fallback recording mode active', err);
+      }
+    }
+  };
+
+  const stopAndSendVoiceRecording = () => {
+    clearInterval(recordingInterval);
+    if (waRecBar) waRecBar.style.display = 'none';
+    if (btnVoiceNote) btnVoiceNote.classList.remove('recording');
+
+    const elapsed = Math.max(1, Math.floor((Date.now() - recordingStartTime) / 1000));
+    const mins = Math.floor(elapsed / 60);
+    const secs = elapsed % 60;
+    const durationStr = `${mins}:${secs < 10 ? '0' : ''}${secs}`;
+
+    const finishSending = (blobUrl) => {
+      const ch = window.stateManager.getCurrentChannel();
+      if (!ch) return;
+      const me = window.stateManager.state.currentUser;
+      const voiceMsg = {
+        id: 'msg-' + Date.now(),
+        author: {
+          name: me.name,
+          avatarText: me.avatarText,
+          avatarBg: me.avatarBg,
+          avatarPhoto: me.avatarPhoto || null,
+          role: me.role,
+          isBot: false
+        },
+        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        content: '',
+        isVoiceNote: true,
+        audioUrl: blobUrl,
+        audioDuration: durationStr,
+        replyTo: window.uiController.currentQuoteReply || null
+      };
+      window.uiController.currentQuoteReply = null;
+      window.stateManager.addMessage(ch.id, voiceMsg);
+      window.uiController.renderMessages();
+      if (window.networkEngine) {
+        window.networkEngine.broadcastChatMessage(ch.id, voiceMsg);
+      }
+      if (window.audioEngine && window.audioEngine.playSendSound) {
+        window.audioEngine.playSendSound();
+      }
+    };
+
+    if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+      mediaRecorder.onstop = () => {
+        const blob = new Blob(audioChunks, { type: 'audio/webm' });
+        const blobUrl = URL.createObjectURL(blob);
+        finishSending(blobUrl);
+        if (mediaRecorder.stream) {
+          mediaRecorder.stream.getTracks().forEach(t => t.stop());
+        }
+        mediaRecorder = null;
+      };
+      mediaRecorder.stop();
+    } else {
+      // Fallback simulated voice note
+      finishSending(null);
+    }
+  };
+
+  const cancelVoiceRecording = () => {
+    clearInterval(recordingInterval);
+    if (waRecBar) waRecBar.style.display = 'none';
+    if (btnVoiceNote) btnVoiceNote.classList.remove('recording');
+    if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+      if (mediaRecorder.stream) {
+        mediaRecorder.stream.getTracks().forEach(t => t.stop());
+      }
+      mediaRecorder.stop();
+      mediaRecorder = null;
+    }
+    audioChunks = [];
+  };
+
+  if (btnVoiceNote) {
+    btnVoiceNote.onclick = () => {
+      if (waRecBar && waRecBar.style.display === 'flex') {
+        stopAndSendVoiceRecording();
+      } else {
+        startVoiceRecording();
+      }
+    };
+  }
+  if (btnCancelRec) btnCancelRec.onclick = cancelVoiceRecording;
+  if (btnSendRec) btnSendRec.onclick = stopAndSendVoiceRecording;
 
   // 3. File & Image Attachment Staging & Upload
   const btnAttach = document.getElementById('btn-attach');

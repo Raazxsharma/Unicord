@@ -1066,7 +1066,7 @@
   color: #8696a0 !important;
 }
 
-/* WhatsApp Action Circle Button (Mic / Send) */
+/* WhatsApp Action Circle Button (Mic / Send with Arrow) */
 .wa-action-circle-btn {
   width: 44px;
   height: 44px;
@@ -1079,16 +1079,36 @@
   cursor: pointer;
   flex-shrink: 0;
   box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
-  transition: transform 0.15s, background-color 0.15s;
+  transition: transform 0.15s cubic-bezier(0.175, 0.885, 0.32, 1.275), background-color 0.15s;
   border: none;
+  position: relative;
+  overflow: hidden;
 }
 .wa-action-circle-btn:hover {
   transform: scale(1.06);
   background-color: #029071;
 }
+.wa-action-circle-btn:active {
+  transform: scale(0.96);
+}
 .wa-action-circle-btn.recording {
   background-color: #f23f43 !important;
   animation: waPulse 1.2s infinite;
+}
+
+.wa-mic-icon,
+.wa-send-arrow-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  pointer-events: none;
+  transition: transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275), opacity 0.15s ease;
+}
+
+.wa-send-arrow-icon svg {
+  transform: translateX(1px); /* optical alignment for paper plane */
 }
 
 @keyframes waPulse {

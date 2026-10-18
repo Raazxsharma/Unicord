@@ -171,10 +171,23 @@ document.addEventListener('DOMContentLoaded', () => {
   const btnSendMessage = document.getElementById('btn-send-message');
 
   const updateActionButtons = () => {
-    const hasContent = msgInput && msgInput.value.trim().length > 0;
-    if (btnSendMessage && btnVoiceNote) {
-      btnSendMessage.style.display = hasContent ? 'flex' : 'none';
-      btnVoiceNote.style.display = hasContent ? 'none' : 'flex';
+    const textVal = (msgInput && msgInput.value) || '';
+    const hasContent = textVal.trim().length > 0 || !!currentAttachment;
+
+    const btnAction = btnVoiceNote || btnSendMessage;
+    if (btnAction) {
+      btnAction.setAttribute('data-action', hasContent ? 'send' : 'mic');
+      btnAction.setAttribute('title', hasContent ? 'Send Message' : 'Record Voice Note');
+      btnAction.setAttribute('data-tooltip', hasContent ? 'Send Message' : 'Record Voice Note');
+      const micIcon = btnAction.querySelector('.wa-mic-icon');
+      const sendIcon = btnAction.querySelector('.wa-send-arrow-icon');
+      if (micIcon) micIcon.style.display = hasContent ? 'none' : 'flex';
+      if (sendIcon) sendIcon.style.display = hasContent ? 'flex' : 'none';
+    }
+
+    // Hide any redundant separate send button completely
+    if (btnSendMessage && btnSendMessage !== btnVoiceNote) {
+      btnSendMessage.style.display = 'none';
     }
   };
 
@@ -225,6 +238,13 @@ document.addEventListener('DOMContentLoaded', () => {
   };
 
   if (msgInput) {
+    // Listen to all input-related events to ensure immediate icon morphing
+    ['input', 'keyup', 'keydown', 'change', 'paste', 'cut'].forEach(evName => {
+      msgInput.addEventListener(evName, () => {
+        setTimeout(updateActionButtons, 0);
+      });
+    });
+
     msgInput.addEventListener('keydown', (e) => {
       if (e.key === 'Enter' && !e.shiftKey) {
         e.preventDefault();
@@ -232,17 +252,19 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     });
 
-    // Auto-expand textarea & typing indicator & swap mic/send
+    // Auto-expand textarea & typing indicator
     msgInput.addEventListener('input', () => {
       msgInput.style.height = 'auto';
       msgInput.style.height = Math.min(140, msgInput.scrollHeight) + 'px';
-      updateActionButtons();
       
-      const ch = window.stateManager.getCurrentChannel();
+      const ch = window.stateManager ? window.stateManager.getCurrentChannel() : null;
       if (ch && window.networkEngine) {
         window.networkEngine.broadcastTyping(ch.id);
       }
     });
+
+    // Initialize button state immediately
+    updateActionButtons();
   }
 
   if (btnSendMessage) {
@@ -360,11 +382,19 @@ document.addEventListener('DOMContentLoaded', () => {
   };
 
   if (btnVoiceNote) {
-    btnVoiceNote.onclick = () => {
-      if (waRecBar && waRecBar.style.display === 'flex') {
-        stopAndSendVoiceRecording();
+    btnVoiceNote.onclick = (e) => {
+      e.preventDefault();
+      const action = btnVoiceNote.getAttribute('data-action') || 'mic';
+      const hasContent = (msgInput && msgInput.value.trim().length > 0) || !!currentAttachment;
+
+      if (action === 'send' || hasContent) {
+        sendMessage();
       } else {
-        startVoiceRecording();
+        if (waRecBar && waRecBar.style.display === 'flex') {
+          stopAndSendVoiceRecording();
+        } else {
+          startVoiceRecording();
+        }
       }
     };
   }

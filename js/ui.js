@@ -509,7 +509,9 @@ class UIController {
     if (topic) topic.textContent = ch.topic || 'Welcome to this channel';
     if (introTitle) introTitle.textContent = `Welcome to #${ch.name}!`;
     if (introDesc) introDesc.textContent = `This is the start of the #${ch.name} channel for university discussions.`;
-    if (msgInput) msgInput.placeholder = `Message #${ch.name}`;
+    if (msgInput) {
+      msgInput.placeholder = this.isWhatsAppMode ? 'Type a message' : `Message #${ch.name}`;
+    }
   }
 
   // 5. Render Messages Stream
@@ -628,7 +630,7 @@ class UIController {
             <button class="msg-tool-btn emoji-quick-btn" title="Love" onclick="window.uiController.toggleReaction('${msg.id}', '❤️')">❤️</button>
             <button class="msg-tool-btn emoji-quick-btn" title="Laugh" onclick="window.uiController.toggleReaction('${msg.id}', '😂')">😂</button>
             <button class="msg-tool-btn emoji-quick-btn" title="Surprised" onclick="window.uiController.toggleReaction('${msg.id}', '😮')">😮</button>
-            <button class="msg-tool-btn" title="Reply" onclick="window.uiController.quoteReply('${msg.author.name}', '${(msg.content || '').replace(/'/g, "\\'")}')">
+            <button class="msg-tool-btn" title="Reply" onclick="window.uiController.handleReplyClick('${msg.id}')">
               <svg viewBox="0 0 24 24" width="16" height="16"><path fill="currentColor" d="M10 9V5l-7 7 7 7v-4.1c5 0 8.5 1.6 11 5.1-1-5-4-10-11-11z"/></svg>
             </button>
             ${isMe ? `
@@ -673,7 +675,7 @@ class UIController {
             <button class="msg-tool-btn emoji-quick-btn" title="Laugh" onclick="window.uiController.toggleReaction('${msg.id}', '😂')">😂</button>
             <button class="msg-tool-btn emoji-quick-btn" title="Fire" onclick="window.uiController.toggleReaction('${msg.id}', '🔥')">🔥</button>
             <button class="msg-tool-btn emoji-quick-btn" title="Rocket" onclick="window.uiController.toggleReaction('${msg.id}', '🚀')">🚀</button>
-            <button class="msg-tool-btn" title="Reply" onclick="window.uiController.quoteReply('${msg.author.name}', '${(msg.content || '').replace(/'/g, "\\'")}')">
+            <button class="msg-tool-btn" title="Reply" onclick="window.uiController.handleReplyClick('${msg.id}')">
               <svg viewBox="0 0 24 24" width="18" height="18"><path fill="currentColor" d="M10 9V5l-7 7 7 7v-4.1c5 0 8.5 1.6 11 5.1-1-5-4-10-11-11z"/></svg>
             </button>
             ${isMe ? `
@@ -780,6 +782,16 @@ class UIController {
     if (msgInput) {
       msgInput.focus();
       msgInput.placeholder = `Replying to ${authorName}...`;
+    }
+  }
+
+  handleReplyClick(msgId) {
+    const ch = window.stateManager ? window.stateManager.getCurrentChannel() : null;
+    if (!ch) return;
+    const msgs = window.stateManager.getChannelMessages(ch.id);
+    const msg = msgs.find(m => m.id === msgId);
+    if (msg) {
+      this.quoteReply(msg.author.name, msg.content || '');
     }
   }
 
@@ -1932,14 +1944,6 @@ class UIController {
     this.typingTimeout = setTimeout(() => {
       if (typingBar) typingBar.textContent = '';
     }, 2000);
-  }
-
-  quoteReply(username) {
-    const input = document.getElementById('message-input');
-    if (input) {
-      input.value = `> Replying to @${username}:\n` + input.value;
-      input.focus();
-    }
   }
 
   openDirectMessageChat(friend) {

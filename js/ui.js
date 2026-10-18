@@ -1127,9 +1127,11 @@ class UIController {
       if (btnNavStage) btnNavStage.classList.add('active');
       if (miniDock) miniDock.style.display = 'none';
 
+      const activeCh = this.findChannel(window.stateManager.state.activeVoiceChannelId);
+      const effectiveName = channelName || (activeCh ? activeCh.name : 'Voice Room');
       const titleEl = document.getElementById('meet-room-title');
       if (titleEl) {
-        titleEl.textContent = channelName || '24/7 Study Room';
+        titleEl.textContent = effectiveName;
       }
       this.renderMeetStage();
     } else {

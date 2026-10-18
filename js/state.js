@@ -29,7 +29,7 @@ var DEFAULT_STATE = {
   isMuted: false,
   isDeafened: false,
   isScreenSharing: false,
-  meetViewMode: 'spotlight', // 'spotlight' or 'grid'
+  meetViewMode: 'grid', // 'grid' (default for normal voice rooms) or 'spotlight' (when presenting)
   isHandRaised: false,
   inCallDrawerOpen: null, // null, 'chat', 'people', 'activities'
   activeMeetDoc: 'fintech',
@@ -297,15 +297,13 @@ var DEFAULT_STATE = {
       { id: 'p-others', name: '29 others', isOthersTile: true, count: 29, avatarText: '+29', shortInitials: '+29', avatarBg: '#2b2d31' }
     ],
     'chan-voice-lounge': [
-      { id: 'p-sourabh', name: 'Sourabh Singh', avatarText: 'SS', shortInitials: 'SS', handle: '#चौधरी', avatarBg: '#3c4043', isSpeaking: true, isMuted: false, isPresenter: true },
-      { id: 'p-rishab', name: 'rishab jha', avatarText: 'RJ', shortInitials: 'RJ', avatarBg: '#1f3a60', isSpeaking: false, isMuted: true },
-      { id: 'p-abhinav', name: 'Abhinav Gupta', avatarText: 'AG', shortInitials: 'AG', avatarBg: '#234938', isSpeaking: false, isMuted: true },
-      { id: 'p-raj', name: 'Raj Hardainiya', avatarText: 'RH', shortInitials: 'RH', avatarBg: '#543b18', isSpeaking: false, isMuted: true },
-      { id: 'p-others', name: '29 others', isOthersTile: true, count: 29, avatarText: '+29', shortInitials: '+29', avatarBg: '#2b2d31' }
+      { id: 'p-rohan', name: 'Rohan', avatarText: 'RH', shortInitials: 'RH', avatarBg: '#f0b232', isSpeaking: false, isMuted: false },
+      { id: 'p-ghost', name: 'Ghost', avatarText: 'GH', shortInitials: 'GH', avatarBg: '#eb459e', isSpeaking: false, isMuted: true }
     ],
     'chan-voice-squad': [
       { id: 'p-3', name: 'Sarah', avatarText: 'SA', avatarBg: '#23a55a', isSpeaking: false, isMuted: false }
-    ]
+    ],
+    'chan-voice-pair': []
   }
 };
 
@@ -324,6 +322,26 @@ class StateManager {
         const parsed = JSON.parse(saved);
         if (parsed && parsed.guilds && parsed.guilds.length && parsed.guilds[0].id === 'guild-discord') {
           if (parsed.voiceParticipants) {
+            // Purge Sourabh Singh from non-study channels
+            Object.keys(parsed.voiceParticipants).forEach(chId => {
+              if (chId !== 'chan-voice-study' && Array.isArray(parsed.voiceParticipants[chId])) {
+                parsed.voiceParticipants[chId] = parsed.voiceParticipants[chId].filter(p => p.id !== 'p-sourabh' && p.name !== 'Sourabh Singh');
+              }
+            });
+
+            // Clean up Lounge if it still contains old 29 others
+            if (parsed.voiceParticipants['chan-voice-lounge'] && parsed.voiceParticipants['chan-voice-lounge'].some(p => p.id === 'p-sourabh' || p.isOthersTile)) {
+              parsed.voiceParticipants['chan-voice-lounge'] = [
+                { id: 'p-rohan', name: 'Rohan', avatarText: 'RH', shortInitials: 'RH', avatarBg: '#f0b232', isSpeaking: false, isMuted: false },
+                { id: 'p-ghost', name: 'Ghost', avatarText: 'GH', shortInitials: 'GH', avatarBg: '#eb459e', isSpeaking: false, isMuted: true }
+              ];
+            }
+
+            // Ensure Pair Programming is clean
+            if (parsed.voiceParticipants['chan-voice-pair']) {
+              parsed.voiceParticipants['chan-voice-pair'] = parsed.voiceParticipants['chan-voice-pair'].filter(p => p.id !== 'p-sourabh' && p.name !== 'Sourabh Singh');
+            }
+
             Object.values(parsed.voiceParticipants).forEach(list => {
               if (Array.isArray(list)) {
                 list.forEach(p => {

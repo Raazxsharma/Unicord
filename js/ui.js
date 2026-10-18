@@ -1144,7 +1144,14 @@ class UIController {
         miniDock.style.display = inVoice ? 'flex' : 'none';
         const miniText = document.getElementById('meet-mini-channel-text');
         if (miniText && inVoice) {
-          miniText.textContent = `Connected: ${channelName || '24/7 Study Room'} (Sourabh Singh presenting)`;
+          const chId = window.stateManager.state.activeVoiceChannelId;
+          const participants = window.stateManager.state.voiceParticipants[chId] || [];
+          const presenter = participants.find(p => p.isPresenter || p.isSharingScreen);
+          if (presenter) {
+            miniText.textContent = `Connected: ${channelName || 'Voice Room'} (${presenter.name} presenting)`;
+          } else {
+            miniText.textContent = `Connected: ${channelName || 'Voice Room'}`;
+          }
         }
       }
     }
@@ -1157,8 +1164,13 @@ class UIController {
       const isVisible = stageViewport && stageViewport.style.display === 'flex';
       this.showMeetStage(!isVisible);
     } else {
-      // Auto-join 24/7 study room
-      window.voiceController.joinVoice('chan-voice-study', '24/7 Study Room', 'Apex University Hub');
+      const currentGuild = this.getCurrentGuild();
+      const firstVc = currentGuild?.categories?.flatMap(c => c.channels)?.find(c => c.type === 'voice');
+      if (firstVc) {
+        window.voiceController.joinVoice(firstVc.id, firstVc.name, currentGuild.name);
+      } else {
+        window.voiceController.joinVoice('chan-voice-lounge', 'Lounge (General)', 'Unicord Central');
+      }
     }
   }
 
@@ -1268,7 +1280,7 @@ class UIController {
     const isMuted = state.isMuted;
     const isCameraOn = window.voiceController?.isCameraOn;
     const isHandRaised = state.isHandRaised;
-    const mode = state.meetViewMode || 'spotlight';
+    const mode = state.meetViewMode || 'grid';
 
     // 1. Update Header Buttons
     const btnSpotlight = document.getElementById('btn-meet-mode-spotlight');
@@ -1303,14 +1315,20 @@ class UIController {
 
     const dockPeopleBadge = document.getElementById('meet-dock-people-badge');
     if (dockPeopleBadge) {
-      dockPeopleBadge.textContent = '34';
+      const totalCount = participants.reduce((sum, p) => sum + (p.isOthersTile ? (p.count || 1) : 1), 0);
+      dockPeopleBadge.textContent = String(totalCount || 1);
     }
 
     body.innerHTML = '';
 
+    // Active presenter check (NEVER fallback to fake Sourabh Singh!)
+    const activePresenter = participants.find(p => p.isPresenter || p.isSharingScreen) || 
+      (isScreenSharing ? { ...state.currentUser, isPresenter: true, isSharingScreen: true } : null);
+    const isDocPresenting = state.isDocPresenting || (!isScreenSharing && activePresenter && activePresenter.isPresenter);
+
     // 3. Render Based on View Mode
-    if (mode === 'grid') {
-      // Gallery / Grid Mode
+    if (mode === 'grid' || (!isScreenSharing && !isDocPresenting && mode !== 'spotlight')) {
+      // Gallery / Grid Mode: Clean responsive grid of all connected participants
       const gridContainer = document.createElement('div');
       gridContainer.className = 'meet-grid-view';
 
@@ -1339,14 +1357,14 @@ class UIController {
         const avatarStyle = hasPhoto
           ? `background-image: url('${p.avatarPhoto}');`
           : `background-color: ${p.avatarBg || '#5865F2'};`;
-        const avatarText = hasPhoto ? '' : (p.avatarText || p.name.charAt(0));
+        const avatarText = hasPhoto ? '' : this.getSafeAvatarInitials(p);
 
         tile.innerHTML = `
           <div class="meet-tile-avatar" style="${avatarStyle}">
             ${avatarText}
           </div>
           <div class="meet-tile-name-pill">
-            ${p.isPresenter ? '📌' : ''} ${p.name}
+            ${p.isPresenter ? '📌 ' : ''}${p.name}
           </div>
           <div class="meet-tile-mic-badge ${p.isMuted ? 'muted' : ''}">
             ${p.isMuted 
@@ -1361,25 +1379,33 @@ class UIController {
 
       body.appendChild(gridContainer);
     } else {
-      // Spotlight Mode (Google Meet Presentation Layout as in user screenshot)
-      
-      // A. Main Spotlight Area (Left)
+      // Spotlight Mode (Presentation OR Active Speaker Spotlight)
       const spotlight = document.createElement('div');
       spotlight.className = 'meet-spotlight-area';
 
-      // Top Presentation Bar (Google Docs / Meet Shell)
+      // Pick presenter or active speaker
+      const spotlightUser = activePresenter || 
+        participants.find(p => p.isPinned) || 
+        participants.find(p => p.isSpeaking && p.id !== state.currentUser.id) || 
+        participants[0] || 
+        state.currentUser;
+
+      const presenterName = spotlightUser.name;
+      const presenterInitials = this.getSafeAvatarInitials(spotlightUser);
+
+      // Top Presentation / Spotlight Bar
       const banner = document.createElement('div');
       banner.className = 'meet-presentation-banner';
       banner.innerHTML = `
         <div class="meet-banner-top-row">
           <div class="meet-presenter-badge">
-            <div class="meet-presenter-avatar-small">#चौ</div>
-            <div class="meet-presenter-label">Sourabh Singh <span class="meet-presenting-subtag">(Presenting)</span></div>
-            <svg viewBox="0 0 24 24" width="16" height="16" style="color:#bdc1c6; margin-left:4px;"><path fill="currentColor" d="M16 12V4h1V2H7v2h1v8l-2 2v2h5.2v6h1.6v-6H18v-2l-2-2z"/></svg>
+            <div class="meet-presenter-avatar-small">${presenterInitials}</div>
+            <div class="meet-presenter-label">${presenterName} <span class="meet-presenting-subtag">${isScreenSharing ? '(Sharing Screen)' : (isDocPresenting ? '(Presenting)' : '(Spotlighted)')}</span></div>
+            ${isDocPresenting || isScreenSharing ? '<svg viewBox="0 0 24 24" width="16" height="16" style="color:#bdc1c6; margin-left:4px;"><path fill="currentColor" d="M16 12V4h1V2H7v2h1v8l-2 2v2h5.2v6h1.6v-6H18v-2l-2-2z"/></svg>' : ''}
           </div>
 
           <div style="display:flex; align-items:center; gap:8px;">
-            <button class="meet-view-switch-btn ${!isScreenSharing ? 'active' : ''}" onclick="window.voiceController.stopScreenShare()" style="padding:3px 10px; font-size:11px;">
+            <button class="meet-view-switch-btn ${isDocPresenting ? 'active' : ''}" onclick="window.voiceController.toggleDocPresenting()" style="padding:3px 10px; font-size:11px;">
               📄 Notes.docx
             </button>
             <button class="meet-view-switch-btn ${isScreenSharing ? 'active' : ''}" onclick="window.voiceController.toggleScreenShare()" style="padding:3px 10px; font-size:11px;">
@@ -1391,12 +1417,13 @@ class UIController {
           </div>
         </div>
 
+        ${isDocPresenting ? `
         <div class="meet-doc-shell-menubar">
           <div class="meet-doc-title-group">
             <div class="meet-doc-icon">
               <svg viewBox="0 0 24 24" width="18" height="18"><path fill="#4285f4" d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6zm-1 7V3.5L18.5 9H13z"/></svg>
             </div>
-            <div class="meet-doc-title-text">Fintech Ecosystem Notes.docx</div>
+            <div class="meet-doc-title-text">${state.activeMeetDocTitle || 'Fintech Ecosystem Notes.docx'}</div>
             <div class="meet-doc-menu-list">
               <span class="meet-doc-menu-item">File</span>
               <span class="meet-doc-menu-item">Edit</span>
@@ -1421,18 +1448,13 @@ class UIController {
             </button>
           </div>
         </div>
+        ` : ''}
       `;
       spotlight.appendChild(banner);
 
-      // Presentation Viewport (Doc or Video)
+      // Presentation Viewport
       const viewport = document.createElement('div');
       viewport.className = 'meet-presentation-viewport';
-
-      // Laser Pointer Canvas Overlay
-      const laserCanvas = document.createElement('canvas');
-      laserCanvas.className = 'meet-laser-canvas';
-      laserCanvas.id = 'meet-laser-canvas';
-      viewport.appendChild(laserCanvas);
 
       if (isScreenSharing && window.voiceController?.screenStream) {
         // High-Tech Screenshare HUD Overlay
@@ -1468,8 +1490,8 @@ class UIController {
         vid.srcObject = window.voiceController.screenStream;
         vid.onloadedmetadata = () => vid.play().catch(e => console.warn(e));
         viewport.appendChild(vid);
-      } else {
-        // Document Paper View (Matching screenshot)
+      } else if (isDocPresenting) {
+        // Document Paper View
         const paper = document.createElement('div');
         paper.className = 'meet-doc-paper';
         paper.id = 'meet-doc-paper';
@@ -1501,7 +1523,7 @@ class UIController {
         `;
         viewport.appendChild(paper);
 
-        // Floating Bottom-Right Inspection Capsule (Google Docs Style)
+        // Floating Bottom-Right Inspection Capsule
         const capsule = document.createElement('div');
         capsule.className = 'meet-doc-floating-capsule';
         capsule.innerHTML = `
@@ -1513,9 +1535,42 @@ class UIController {
           <button class="meet-doc-tool-btn" onclick="document.getElementById('meet-stage-viewport')?.requestFullscreen?.()" title="Full Screen">⛶</button>
         `;
         viewport.appendChild(capsule);
+      } else {
+        // Speaker Hero Spotlight (when in spotlight mode without doc or screenshare)
+        const heroTile = document.createElement('div');
+        heroTile.className = `meet-hero-tile ${spotlightUser.isSpeaking ? 'speaking' : ''}`;
+        const hasPhoto = !!spotlightUser.avatarPhoto;
+        const avatarStyle = hasPhoto
+          ? `background-image: url('${spotlightUser.avatarPhoto}');`
+          : `background-color: ${spotlightUser.avatarBg || '#5865F2'};`;
+        const avatarContent = hasPhoto ? '' : presenterInitials;
+
+        heroTile.innerHTML = `
+          <div class="meet-hero-avatar" style="${avatarStyle}">
+            ${avatarContent}
+          </div>
+          <div class="meet-hero-info">
+            <div class="meet-hero-name">
+              <span>${spotlightUser.name}</span>
+              ${spotlightUser.isMuted 
+                ? '<span style="color:#ea4335; font-size:14px;" title="Muted">🔇</span>' 
+                : '<span style="color:#23a55a; font-size:14px;" title="Mic Active">🎤</span>'}
+              ${spotlightUser.isHandRaised ? '<span>✋</span>' : ''}
+            </div>
+            <div class="meet-hero-status">
+              ${spotlightUser.isSpeaking ? 'Speaking now...' : (spotlightUser.handle || 'In Voice Channel')}
+            </div>
+          </div>
+        `;
+        viewport.appendChild(heroTile);
       }
 
       // Attach laser pointer interactive trail
+      const laserCanvas = document.createElement('canvas');
+      laserCanvas.className = 'meet-laser-canvas';
+      laserCanvas.id = 'meet-laser-canvas';
+      viewport.appendChild(laserCanvas);
+
       if (window.voiceController?.isLaserActive) {
         viewport.classList.add('meet-laser-active-cursor');
         this.initLaserPointerCanvas(laserCanvas, viewport);
@@ -1526,95 +1581,84 @@ class UIController {
       spotlight.appendChild(viewport);
       body.appendChild(spotlight);
 
-      // B. Right Participants Sidebar
-      const sidebar = document.createElement('div');
-      sidebar.className = 'meet-participants-sidebar';
+      // B. Right Participants Sidebar (only if there are other participants)
+      const others = participants.filter(p => p.id !== spotlightUser.id);
+      if (others.length > 0 || isDocPresenting || isScreenSharing) {
+        const sidebar = document.createElement('div');
+        sidebar.className = 'meet-participants-sidebar';
 
-      // 1. Top Presenter Card
-      const presenter = participants.find(p => p.name === 'Sourabh Singh' || p.isPresenter) || {
-        id: 'p-sourabh',
-        name: 'Sourabh Singh',
-        avatarText: 'SS',
-        shortInitials: 'SS',
-        handle: '#चौधरी',
-        avatarBg: '#3c4043',
-        isSpeaking: true,
-        isMuted: false
-      };
-
-      const presenterCard = document.createElement('div');
-      presenterCard.className = `meet-presenter-card ${presenter.isSpeaking ? 'speaking' : ''}`;
-      presenterCard.id = `meet-tile-${presenter.id}`;
-      presenterCard.innerHTML = `
-        <div class="meet-audio-wave">
-          <div class="wave-bar"></div>
-          <div class="wave-bar"></div>
-          <div class="wave-bar"></div>
-        </div>
-        <div class="meet-presenter-avatar-large">
-          ${this.getSafeAvatarInitials(presenter)}
-        </div>
-        <div class="meet-tile-name-pill">
-          📌 ${presenter.name} ${presenter.handle || ''}
-        </div>
-      `;
-      presenterCard.onclick = (e) => this.openMemberProfilePopover(presenter, e);
-      sidebar.appendChild(presenterCard);
-
-      // 2. Bottom 2x2 Grid
-      const grid = document.createElement('div');
-      grid.className = 'meet-participants-grid';
-
-      // Other participants except presenter
-      const others = participants.filter(p => p.id !== presenter.id);
-
-      others.forEach(p => {
-        if (p.isOthersTile) {
-          const othersTile = document.createElement('div');
-          othersTile.className = 'meet-tile-others';
-          othersTile.onclick = () => window.voiceController.toggleInCallDrawer('people');
-          othersTile.innerHTML = `
-            <div class="meet-avatar-stack">
-              <div class="meet-avatar-stack-item" style="background:#1f3a60;">RJ</div>
-              <div class="meet-avatar-stack-item" style="background:#234938;">AG</div>
-              <div class="meet-avatar-stack-item" style="background:#543b18;">RH</div>
-            </div>
-            <div class="meet-others-label">${p.name || '29 others'}</div>
-          `;
-          grid.appendChild(othersTile);
-          return;
-        }
-
-        const tile = document.createElement('div');
-        tile.className = `meet-tile ${p.isSpeaking ? 'speaking' : ''}`;
-        tile.id = `meet-tile-${p.id}`;
-
-        const hasPhoto = !!p.avatarPhoto;
-        const avatarStyle = hasPhoto
-          ? `background-image: url('${p.avatarPhoto}');`
-          : `background-color: ${p.avatarBg || '#5865F2'};`;
-        const avatarText = hasPhoto ? '' : this.getSafeAvatarInitials(p);
-
-        tile.innerHTML = `
-          <div class="meet-tile-avatar" style="${avatarStyle}">
-            ${avatarText}
+        // 1. Top Card (Spotlight User)
+        const presenterCard = document.createElement('div');
+        presenterCard.className = `meet-presenter-card ${spotlightUser.isSpeaking ? 'speaking' : ''}`;
+        presenterCard.id = `meet-tile-${spotlightUser.id}`;
+        presenterCard.innerHTML = `
+          <div class="meet-audio-wave">
+            <div class="wave-bar"></div>
+            <div class="wave-bar"></div>
+            <div class="wave-bar"></div>
+          </div>
+          <div class="meet-presenter-avatar-large" style="background-color: ${spotlightUser.avatarBg || '#3c4043'};">
+            ${presenterInitials}
           </div>
           <div class="meet-tile-name-pill">
-            ${p.name}
+            📌 ${spotlightUser.name} ${spotlightUser.handle || ''}
           </div>
-          <div class="meet-tile-mic-badge ${p.isMuted ? 'muted' : ''}">
-            ${p.isMuted 
-              ? '<svg viewBox="0 0 24 24" width="12" height="12"><path fill="#ffffff" d="M19 11h-1.7c0 .74-.16 1.43-.43 2.05l1.23 1.23c.56-.98.9-2.09.9-3.28zm-4.02.17c0-.06.02-.11.02-.17V5c0-1.66-1.34-3-3-3S9 3.34 9 5v.18l5.98 5.99zM4.27 3L3 4.27l6.01 6.01V11c0 1.66 1.33 3 2.99 3 .22 0 .44-.03.65-.08l1.66 1.66c-.71.33-1.5.52-2.31.52-2.76 0-5.3-2.24-5.3-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c1.33-.19 2.53-.74 3.53-1.54l3.2 3.2L21 18.27 4.27 3z"/></svg>' 
-              : '<svg viewBox="0 0 24 24" width="12" height="12"><path fill="#23a55a" d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z"/></svg>'}
-          </div>
-          ${p.isHandRaised ? '<div class="meet-hand-raised-badge">✋</div>' : ''}
         `;
-        tile.onclick = (e) => this.openMemberProfilePopover(p, e);
-        grid.appendChild(tile);
-      });
+        presenterCard.onclick = (e) => this.openMemberProfilePopover(spotlightUser, e);
+        sidebar.appendChild(presenterCard);
 
-      sidebar.appendChild(grid);
-      body.appendChild(sidebar);
+        // 2. Bottom Grid
+        const grid = document.createElement('div');
+        grid.className = 'meet-participants-grid';
+
+        others.forEach(p => {
+          if (p.isOthersTile) {
+            const othersTile = document.createElement('div');
+            othersTile.className = 'meet-tile-others';
+            othersTile.onclick = () => window.voiceController.toggleInCallDrawer('people');
+            othersTile.innerHTML = `
+              <div class="meet-avatar-stack">
+                <div class="meet-avatar-stack-item" style="background:#1f3a60;">RJ</div>
+                <div class="meet-avatar-stack-item" style="background:#234938;">AG</div>
+                <div class="meet-avatar-stack-item" style="background:#543b18;">RH</div>
+              </div>
+              <div class="meet-others-label">${p.name || '29 others'}</div>
+            `;
+            grid.appendChild(othersTile);
+            return;
+          }
+
+          const tile = document.createElement('div');
+          tile.className = `meet-tile ${p.isSpeaking ? 'speaking' : ''}`;
+          tile.id = `meet-tile-${p.id}`;
+
+          const hasPhoto = !!p.avatarPhoto;
+          const avatarStyle = hasPhoto
+            ? `background-image: url('${p.avatarPhoto}');`
+            : `background-color: ${p.avatarBg || '#5865F2'};`;
+          const avatarText = hasPhoto ? '' : this.getSafeAvatarInitials(p);
+
+          tile.innerHTML = `
+            <div class="meet-tile-avatar" style="${avatarStyle}">
+              ${avatarText}
+            </div>
+            <div class="meet-tile-name-pill">
+              ${p.name}
+            </div>
+            <div class="meet-tile-mic-badge ${p.isMuted ? 'muted' : ''}">
+              ${p.isMuted 
+                ? '<svg viewBox="0 0 24 24" width="12" height="12"><path fill="#ffffff" d="M19 11h-1.7c0 .74-.16 1.43-.43 2.05l1.23 1.23c.56-.98.9-2.09.9-3.28zm-4.02.17c0-.06.02-.11.02-.17V5c0-1.66-1.34-3-3-3S9 3.34 9 5v.18l5.98 5.99zM4.27 3L3 4.27l6.01 6.01V11c0 1.66 1.33 3 2.99 3 .22 0 .44-.03.65-.08l1.66 1.66c-.71.33-1.5.52-2.31.52-2.76 0-5.3-2.24-5.3-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c1.33-.19 2.53-.74 3.53-1.54l3.2 3.2L21 18.27 4.27 3z"/></svg>' 
+                : '<svg viewBox="0 0 24 24" width="12" height="12"><path fill="#23a55a" d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z"/></svg>'}
+            </div>
+            ${p.isHandRaised ? '<div class="meet-hand-raised-badge">✋</div>' : ''}
+          `;
+          tile.onclick = (e) => this.openMemberProfilePopover(p, e);
+          grid.appendChild(tile);
+        });
+
+        sidebar.appendChild(grid);
+        body.appendChild(sidebar);
+      }
     }
 
     // 4. In-Call Drawer Rendering

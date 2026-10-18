@@ -94,6 +94,12 @@ class VoiceController {
       window.networkEngine.broadcastVoiceJoin(channelId);
     }
 
+    // Choose initial view mode: spotlight if a presenter is actively presenting, otherwise grid
+    const chanParticipants = window.stateManager.state.voiceParticipants[channelId] || [];
+    const hasActivePresenter = chanParticipants.some(p => p.isPresenter);
+    window.stateManager.state.meetViewMode = hasActivePresenter ? 'spotlight' : 'grid';
+    window.stateManager.state.isDocPresenting = hasActivePresenter;
+
     window.stateManager.saveState();
     window.uiController.updateVoiceConnectionUI(true, channelName, guildName);
     window.uiController.showMeetStage(true, channelName, guildName);
@@ -197,6 +203,15 @@ class VoiceController {
     window.uiController.renderMeetStage();
   }
 
+  toggleDocPresenting() {
+    window.stateManager.state.isDocPresenting = !window.stateManager.state.isDocPresenting;
+    if (window.stateManager.state.isDocPresenting) {
+      window.stateManager.state.meetViewMode = 'spotlight';
+    }
+    window.stateManager.saveState();
+    window.uiController.renderMeetStage();
+  }
+
   toggleInCallDrawer(tab) {
     const current = window.stateManager.state.inCallDrawerOpen;
     window.stateManager.state.inCallDrawerOpen = current === tab ? null : tab;
@@ -260,8 +275,10 @@ class VoiceController {
     window.stateManager.saveState();
     window.uiController.renderMeetStage();
 
-    // Auto response from Sourabh Singh or classmates if a question is asked
-    if (text.includes('?') || text.toLowerCase().includes('sir')) {
+    // Auto response from Sourabh Singh only if he is actually in this voice channel
+    const currentChId = window.stateManager.state.activeVoiceChannelId;
+    const hasSourabhInRoom = window.stateManager.state.voiceParticipants[currentChId]?.some(p => p.name === 'Sourabh Singh');
+    if (hasSourabhInRoom && (text.includes('?') || text.toLowerCase().includes('sir'))) {
       setTimeout(() => {
         const answers = [
           "Good question! As highlighted on page 9, consent management architecture is decentralized.",
@@ -509,7 +526,7 @@ class VoiceController {
         "Testing, one two three. Can everyone in the voice room hear this?",
         "Audio is crystal clear on my end too!"
       ];
-      if (speaker.name === 'Sourabh Singh' || speaker.isPresenter) {
+      if (speaker.name === 'Sourabh Singh') {
         phrases = [
           "As shown on page 9, API consent architecture protects sensitive banking credentials.",
           "An API connects two independent systems in a structured and audited way.",

@@ -285,7 +285,22 @@ class NetworkEngine {
         const p = window.stateManager.state.voiceParticipants[chId]?.find(x => x.peerId === peerId || x.id === peerId);
         if (p) {
           p.remoteStream = remoteStream;
+          const videoTracks = remoteStream.getVideoTracks();
+          if (videoTracks.length > 0) {
+            p.isSharingScreen = true;
+            p.remoteVideoStream = remoteStream;
+            window.stateManager.state.meetViewMode = 'spotlight';
+            videoTracks.forEach(vt => {
+              vt.onended = () => {
+                p.isSharingScreen = false;
+                p.remoteVideoStream = null;
+                window.uiController?.renderVoiceStage();
+                window.uiController?.renderMeetStage();
+              };
+            });
+          }
           window.uiController?.renderVoiceStage();
+          window.uiController?.renderMeetStage();
         }
       }
 

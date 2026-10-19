@@ -1305,9 +1305,14 @@ class UIController {
       dockCam.classList.toggle('active-blue', isCameraOn);
     }
 
+    // 1. Identify screen sharers
+    const isLocalSharing = isScreenSharing && !!window.voiceController?.screenStream;
+    const remoteScreenPeer = participants.find(p => p.isSharingScreen && (p.remoteVideoStream || p.remoteStream));
+    const isAnyScreenActive = isLocalSharing || !!remoteScreenPeer;
+
     const dockScreen = document.getElementById('btn-dock-screenshare');
     if (dockScreen) {
-      dockScreen.classList.toggle('active-blue', isScreenSharing);
+      dockScreen.classList.toggle('active-blue', isLocalSharing);
     }
 
     const dockHand = document.getElementById('btn-dock-raise-hand');
@@ -1323,13 +1328,16 @@ class UIController {
 
     body.innerHTML = '';
 
-    // Active presenter check (NEVER fallback to fake Sourabh Singh!)
-    const activePresenter = participants.find(p => p.isPresenter || p.isSharingScreen) || 
-      (isScreenSharing ? { ...state.currentUser, isPresenter: true, isSharingScreen: true } : null);
-    const isDocPresenting = state.isDocPresenting || (!isScreenSharing && activePresenter && activePresenter.isPresenter);
+    // Active presenter check (Screen sharer takes highest priority, NEVER fallback to fake Sourabh Singh!)
+    const activePresenter = isLocalSharing
+      ? { ...state.currentUser, isPresenter: true, isSharingScreen: true }
+      : (remoteScreenPeer || participants.find(p => p.isPresenter));
+
+    const isDocPresenting = state.isDocPresenting || (!isAnyScreenActive && activePresenter && activePresenter.isPresenter);
 
     // 3. Render Based on View Mode
-    if (mode === 'grid' || (!isScreenSharing && !isDocPresenting && mode !== 'spotlight')) {
+    // NOTE: When ANY screen share is active, we ALWAYS show the screen share in Spotlight!
+    if (!isAnyScreenActive && (mode === 'grid' || (!isDocPresenting && mode !== 'spotlight'))) {
       // Gallery / Grid Mode: Clean responsive grid of all connected participants
       const gridContainer = document.createElement('div');
       gridContainer.className = 'meet-grid-view';
@@ -1402,15 +1410,15 @@ class UIController {
         <div class="meet-banner-top-row">
           <div class="meet-presenter-badge">
             <div class="meet-presenter-avatar-small">${presenterInitials}</div>
-            <div class="meet-presenter-label">${presenterName} <span class="meet-presenting-subtag">${isScreenSharing ? '(Sharing Screen)' : (isDocPresenting ? '(Presenting)' : '(Spotlighted)')}</span></div>
-            ${isDocPresenting || isScreenSharing ? '<svg viewBox="0 0 24 24" width="16" height="16" style="color:#bdc1c6; margin-left:4px;"><path fill="currentColor" d="M16 12V4h1V2H7v2h1v8l-2 2v2h5.2v6h1.6v-6H18v-2l-2-2z"/></svg>' : ''}
+            <div class="meet-presenter-label">${presenterName} <span class="meet-presenting-subtag">${isAnyScreenActive ? '(Sharing Screen)' : (isDocPresenting ? '(Presenting)' : '(Spotlighted)')}</span></div>
+            ${isDocPresenting || isAnyScreenActive ? '<svg viewBox="0 0 24 24" width="16" height="16" style="color:#bdc1c6; margin-left:4px;"><path fill="currentColor" d="M16 12V4h1V2H7v2h1v8l-2 2v2h5.2v6h1.6v-6H18v-2l-2-2z"/></svg>' : ''}
           </div>
 
           <div style="display:flex; align-items:center; gap:8px;">
             <button class="meet-view-switch-btn ${isDocPresenting ? 'active' : ''}" onclick="window.voiceController.toggleDocPresenting()" style="padding:3px 10px; font-size:11px;">
               📄 Notes.docx
             </button>
-            <button class="meet-view-switch-btn ${isScreenSharing ? 'active' : ''}" onclick="window.voiceController.toggleScreenShare()" style="padding:3px 10px; font-size:11px;">
+            <button class="meet-view-switch-btn ${isLocalSharing ? 'active' : ''}" onclick="window.voiceController.toggleScreenShare()" style="padding:3px 10px; font-size:11px;">
               🖥️ Screen Share
             </button>
             <button class="meet-view-switch-btn" onclick="window.whiteboardController?.openModal()" style="padding:3px 10px; font-size:11px;">
@@ -1458,7 +1466,8 @@ class UIController {
       const viewport = document.createElement('div');
       viewport.className = 'meet-presentation-viewport';
 
-      if (isScreenSharing && window.voiceController?.screenStream) {
+      if (isLocalSharing) {
+        viewport.classList.add('has-video');
         // High-Tech Screenshare HUD Overlay
         const hud = document.createElement('div');
         hud.className = 'screenshare-hud-overlay';
@@ -1490,6 +1499,33 @@ class UIController {
         vid.autoplay = true;
         vid.playsInline = true;
         vid.srcObject = window.voiceController.screenStream;
+        vid.onloadedmetadata = () => vid.play().catch(e => console.warn(e));
+        viewport.appendChild(vid);
+      } else if (remoteScreenPeer) {
+        viewport.classList.add('has-video');
+        const hud = document.createElement('div');
+        hud.className = 'screenshare-hud-overlay';
+        hud.innerHTML = `
+          <div class="screenshare-telemetry-pill">
+            <div class="screenshare-live-pulse"></div>
+            <span>${remoteScreenPeer.name.toUpperCase()} IS SHARING SCREEN • WebRTC HD 1080p</span>
+          </div>
+          <div class="screenshare-hud-buttons">
+            <button class="screenshare-pill-btn" onclick="window.voiceController.togglePiP()">
+              🪟 Picture-in-Picture
+            </button>
+            <button class="screenshare-pill-btn" onclick="window.voiceController.toggleFitMode()" id="screenshare-fit-label">
+              Fit
+            </button>
+          </div>
+        `;
+        viewport.appendChild(hud);
+
+        const vid = document.createElement('video');
+        vid.className = 'meet-video-screen';
+        vid.autoplay = true;
+        vid.playsInline = true;
+        vid.srcObject = remoteScreenPeer.remoteVideoStream || remoteScreenPeer.remoteStream;
         vid.onloadedmetadata = () => vid.play().catch(e => console.warn(e));
         viewport.appendChild(vid);
       } else if (isDocPresenting) {
@@ -1871,6 +1907,7 @@ class UIController {
 
     this.renderChannels();
     this.renderVoiceStage();
+    this.renderMeetStage();
   }
 
   setUserSpeakingHighlight(isSpeaking) {

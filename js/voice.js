@@ -377,13 +377,15 @@ class VoiceController {
             track.onended = () => this.stopCamera();
           });
         }
+        this.isCameraOn = true;
       } catch (e) {
         console.warn('[UniCord Camera] Camera permission or device unavailable, using simulated video', e);
+        this.isCameraOn = true;
       }
-      this.isCameraOn = true;
     }
     if (window.networkEngine) window.networkEngine.reconnectWebRTC();
     window.uiController.renderVoiceStage();
+    window.uiController.renderMeetStage();
     window.uiController.updateVoiceConnectionUI(true);
   }
 
@@ -395,35 +397,42 @@ class VoiceController {
     this.isCameraOn = false;
     if (window.networkEngine) window.networkEngine.reconnectWebRTC();
     window.uiController.renderVoiceStage();
+    window.uiController.renderMeetStage();
     window.uiController.updateVoiceConnectionUI(true);
   }
 
   async toggleScreenShare() {
     if (window.stateManager.state.isScreenSharing) {
       this.stopScreenShare();
-    } else {
-      try {
-        if (navigator.mediaDevices && navigator.mediaDevices.getDisplayMedia) {
-          this.screenStream = await navigator.mediaDevices.getDisplayMedia({
-            video: {
-              width: { ideal: 1920, max: 3840 },
-              height: { ideal: 1080, max: 2160 },
-              frameRate: { ideal: 60, max: 60 }
-            },
-            audio: false
-          });
-          this.screenStream.getVideoTracks().forEach(track => {
-            track.onended = () => this.stopScreenShare();
-          });
-        }
-      } catch (e) {
-        console.warn('[UniCord ScreenShare] User cancelled or permission denied; using presentation preview mode', e);
-      }
-      window.stateManager.state.isScreenSharing = true;
-      window.stateManager.saveState();
-      if (window.networkEngine) window.networkEngine.reconnectWebRTC();
+      return;
     }
+
+    try {
+      if (navigator.mediaDevices && navigator.mediaDevices.getDisplayMedia) {
+        this.screenStream = await navigator.mediaDevices.getDisplayMedia({
+          video: {
+            width: { ideal: 1920, max: 3840 },
+            height: { ideal: 1080, max: 2160 },
+            frameRate: { ideal: 60, max: 60 }
+          },
+          audio: false
+        });
+        this.screenStream.getVideoTracks().forEach(track => {
+          track.onended = () => this.stopScreenShare();
+        });
+        window.stateManager.state.isScreenSharing = true;
+        window.stateManager.state.meetViewMode = 'spotlight';
+        window.stateManager.saveState();
+        if (window.networkEngine) window.networkEngine.reconnectWebRTC();
+      }
+    } catch (e) {
+      console.warn('[UniCord ScreenShare] User cancelled or permission denied; using presentation preview mode', e);
+      window.stateManager.state.isScreenSharing = false;
+      window.stateManager.saveState();
+    }
+
     window.uiController.renderVoiceStage();
+    window.uiController.renderMeetStage();
     window.uiController.updateVoiceConnectionUI(true);
   }
 
@@ -436,6 +445,7 @@ class VoiceController {
     window.stateManager.saveState();
     if (window.networkEngine) window.networkEngine.reconnectWebRTC();
     window.uiController.renderVoiceStage();
+    window.uiController.renderMeetStage();
     window.uiController.updateVoiceConnectionUI(true);
   }
 

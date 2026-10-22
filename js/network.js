@@ -251,6 +251,73 @@ class NetworkEngine {
     return combined;
   }
 
+  broadcastStreamStatus(isCameraOn, isScreenSharing) {
+    if (!this.mqttClient || !this.isConnected) return;
+    const activeVoice = window.stateManager?.state?.activeVoiceChannelId;
+    if (!activeVoice) return;
+
+    const topic = `unicord/voice/${activeVoice}`;
+    const payload = JSON.stringify({
+      type: 'STREAM_STATUS',
+      userId: this.userId,
+      peerId: this.peerId,
+      channelId: activeVoice,
+      isCameraOn: !!isCameraOn,
+      isScreenSharing: !!isScreenSharing
+    });
+    this.mqttClient.publish(topic, payload);
+  }
+
+  async updateWebRTCTracks() {
+    console.log('[UniCord WebRTC] Updating WebRTC media tracks across active peers...');
+    const combinedStream = await this.getOrCreateMicStream();
+    const activeVideoTrack = combinedStream.getVideoTracks()[0] || null;
+
+    let renegotiateNeeded = false;
+
+    this.activeVoiceCallPeers.forEach((call, peerId) => {
+      try {
+        const pc = call.peerConnection;
+        if (pc) {
+          const senders = pc.getSenders ? pc.getSenders() : [];
+          const videoSender = senders.find(s => s.track && s.track.kind === 'video') ||
+                              senders.find(s => s.kind === 'video' || (s.track === null && s.dtlsTransport));
+
+          if (videoSender) {
+            videoSender.replaceTrack(activeVideoTrack).then(() => {
+              console.log('[UniCord WebRTC] Successfully replaced video track on peer:', peerId);
+              try {
+                const params = videoSender.getParameters();
+                if (params && params.encodings && params.encodings.length > 0) {
+                  const isScreen = window.stateManager?.state?.isScreenSharing;
+                  params.encodings[0].maxBitrate = isScreen ? 5000000 : 2500000;
+                  params.encodings[0].priority = 'high';
+                  params.encodings[0].networkPriority = 'high';
+                  params.encodings[0].maxFramerate = isScreen ? 60 : 30;
+                  videoSender.setParameters(params).catch(() => {});
+                }
+              } catch (err) {}
+            }).catch(e => {
+              console.warn('[UniCord WebRTC] replaceTrack error, falling back to renegotiate:', e);
+              renegotiateNeeded = true;
+            });
+          } else if (activeVideoTrack) {
+            // Need redial or renegotiation since initial connection had no video transceiver
+            renegotiateNeeded = true;
+          }
+        } else {
+          renegotiateNeeded = true;
+        }
+      } catch (e) {
+        renegotiateNeeded = true;
+      }
+    });
+
+    if (renegotiateNeeded) {
+      this.reconnectWebRTC();
+    }
+  }
+
   async reconnectWebRTC() {
     console.log('[UniCord Voice WebRTC] Reconnecting WebRTC to push new stream...');
     const activePeers = Array.from(this.activeVoiceCallPeers.keys());
@@ -267,7 +334,7 @@ class NetworkEngine {
       activePeers.forEach(peerId => {
         this.initiateVoiceCallToPeer(peerId);
       });
-    }, 500);
+    }, 400);
   }
 
   // -------------------------------------------------------------
@@ -276,6 +343,27 @@ class NetworkEngine {
   setupRemoteAudioStream(call) {
     const peerId = call.peer;
     this.activeVoiceCallPeers.set(peerId, call);
+
+    // Optimize sender video encoding for smooth 60 FPS playback
+    setTimeout(() => {
+      try {
+        const pc = call.peerConnection;
+        if (pc && pc.getSenders) {
+          const videoSender = pc.getSenders().find(s => s.track && s.track.kind === 'video');
+          if (videoSender) {
+            const params = videoSender.getParameters();
+            if (params && params.encodings && params.encodings.length > 0) {
+              const isScreen = window.stateManager?.state?.isScreenSharing;
+              params.encodings[0].maxBitrate = isScreen ? 5000000 : 2500000;
+              params.encodings[0].priority = 'high';
+              params.encodings[0].networkPriority = 'high';
+              params.encodings[0].maxFramerate = isScreen ? 60 : 30;
+              videoSender.setParameters(params).catch(() => {});
+            }
+          }
+        }
+      } catch (err) {}
+    }, 400);
 
     call.on('stream', (remoteStream) => {
       console.log('[UniCord Voice WebRTC] Received live audio stream from friend:', peerId, remoteStream);
@@ -287,17 +375,22 @@ class NetworkEngine {
           p.remoteStream = remoteStream;
           const videoTracks = remoteStream.getVideoTracks();
           if (videoTracks.length > 0) {
-            p.isSharingScreen = true;
             p.remoteVideoStream = remoteStream;
-            window.stateManager.state.meetViewMode = 'spotlight';
+            // If peer hasn't been flagged specifically via MQTT, treat video as camera or screenshare
+            if (!p.isSharingScreen) {
+              p.isCameraOn = true;
+            }
             videoTracks.forEach(vt => {
               vt.onended = () => {
                 p.isSharingScreen = false;
+                p.isCameraOn = false;
                 p.remoteVideoStream = null;
                 window.uiController?.renderVoiceStage();
                 window.uiController?.renderMeetStage();
               };
             });
+          } else {
+            p.remoteVideoStream = null;
           }
           window.uiController?.renderVoiceStage();
           window.uiController?.renderMeetStage();
@@ -783,6 +876,24 @@ class NetworkEngine {
             window.uiController.updateVoiceCardMuteState(p.id, p.isMuted);
           }
           window.uiController?.renderChannels();
+        }
+      }
+      return;
+    }
+
+    if (data.type === 'STREAM_STATUS') {
+      const activeVoice = data.channelId;
+      if (activeVoice && window.stateManager.state.voiceParticipants[activeVoice]) {
+        const p = window.stateManager.state.voiceParticipants[activeVoice].find(x => x.id === uid || x.peerId === data.peerId);
+        if (p) {
+          p.isCameraOn = !!data.isCameraOn;
+          p.isSharingScreen = !!data.isScreenSharing;
+          if (p.isSharingScreen) {
+            window.stateManager.state.meetViewMode = 'spotlight';
+          }
+          window.uiController?.renderChannels();
+          window.uiController?.renderVoiceStage();
+          window.uiController?.renderMeetStage();
         }
       }
       return;

@@ -127,6 +127,19 @@ class UIController {
       this.remoteSpeakingInterval = setInterval(() => {
         if (remoteCard) remoteCard.classList.toggle('speaking');
       }, 1800);
+
+      // If started as Video Call, activate camera immediately
+      if (this.activeCallFriend?.isVideo) {
+        setTimeout(() => {
+          if (!window.voiceController?.isCameraOn) {
+            window.voiceController?.toggleCamera();
+          } else {
+            this.updateDirectCallVideos();
+          }
+        }, 350);
+      } else {
+        this.updateDirectCallVideos();
+      }
     }
   }
 
@@ -141,12 +154,204 @@ class UIController {
     }
   }
 
+  async toggleDirectCallCamera() {
+    if (window.voiceController?.isCameraOn) {
+      window.voiceController.stopCamera();
+    } else {
+      await window.voiceController.toggleCamera();
+    }
+    this.updateDirectCallVideos();
+  }
+
+  async toggleDirectCallScreenShare() {
+    if (window.stateManager?.state?.isScreenSharing) {
+      window.voiceController?.stopScreenShare();
+    } else {
+      await window.voiceController?.toggleScreenShare();
+    }
+    this.updateDirectCallVideos();
+  }
+
+  updateDirectCallVideos() {
+    const localCard = document.getElementById('direct-call-local-card');
+    const remoteCard = document.getElementById('direct-call-remote-card');
+    const btnVideo = document.getElementById('btn-call-video');
+    const btnScreen = document.getElementById('btn-call-screenshare');
+    if (!localCard) return;
+
+    const hasLocalCamera = window.voiceController?.isCameraOn && !!window.voiceController?.cameraStream;
+    const isScreenSharing = window.stateManager?.state?.isScreenSharing && !!window.voiceController?.screenStream;
+
+    if (btnVideo) {
+      btnVideo.classList.toggle('active', hasLocalCamera);
+      btnVideo.classList.toggle('active-blue', hasLocalCamera);
+    }
+    if (btnScreen) {
+      btnScreen.classList.toggle('active', isScreenSharing);
+      btnScreen.classList.toggle('active-blue', isScreenSharing);
+    }
+
+    // Local Video
+    let localVid = localCard.querySelector('video');
+    if (hasLocalCamera || isScreenSharing) {
+      localCard.classList.add('has-video');
+      if (!localVid) {
+        localVid = document.createElement('video');
+        localVid.className = 'direct-call-video';
+        localVid.autoplay = true;
+        localVid.playsInline = true;
+        localVid.muted = true;
+        localCard.prepend(localVid);
+      }
+      localVid.srcObject = isScreenSharing ? window.voiceController.screenStream : window.voiceController.cameraStream;
+      localVid.classList.toggle('mirrored', !isScreenSharing);
+      localVid.play().catch(e => console.warn(e));
+    } else {
+      localCard.classList.remove('has-video');
+      if (localVid) localVid.remove();
+    }
+
+    // Remote simulated or peer video
+    const showRemoteVideo = this.activeCallFriend?.isVideo || hasLocalCamera;
+    if (remoteCard && showRemoteVideo) {
+      remoteCard.classList.add('has-video');
+      let remoteVid = remoteCard.querySelector('video');
+      if (!remoteVid) {
+        remoteVid = document.createElement('video');
+        remoteVid.className = 'direct-call-video';
+        remoteVid.autoplay = true;
+        remoteVid.playsInline = true;
+        remoteVid.muted = true;
+        remoteCard.prepend(remoteVid);
+      }
+      if (!remoteVid.srcObject) {
+        remoteVid.srcObject = this.createRemoteFriendVideoStream(this.activeCallFriend);
+        remoteVid.play().catch(e => console.warn(e));
+      }
+    } else if (remoteCard && !showRemoteVideo) {
+      remoteCard.classList.remove('has-video');
+      const remoteVid = remoteCard.querySelector('video');
+      if (remoteVid) remoteVid.remove();
+    }
+  }
+
+  createRemoteFriendVideoStream(friend) {
+    const canvas = document.createElement('canvas');
+    canvas.width = 640;
+    canvas.height = 480;
+    const ctx = canvas.getContext('2d', { alpha: false });
+    const f = friend || { name: 'Sarah', avatarBg: '#23a55a', avatarText: 'SA' };
+
+    let frame = 0;
+    let lastDraw = 0;
+    const draw = (now) => {
+      const callOverlay = document.getElementById('direct-call-overlay');
+      if (!callOverlay || callOverlay.style.display === 'none') return;
+
+      // Throttle canvas animation to smooth 30 FPS to save CPU
+      if (now - lastDraw < 32) {
+        requestAnimationFrame(draw);
+        return;
+      }
+      lastDraw = now;
+      frame++;
+
+      const grad = ctx.createLinearGradient(0, 0, 640, 480);
+      grad.addColorStop(0, '#16222f');
+      grad.addColorStop(1, '#0d131a');
+      ctx.fillStyle = grad;
+      ctx.fillRect(0, 0, 640, 480);
+
+      // Grid pattern
+      ctx.strokeStyle = 'rgba(35, 165, 90, 0.12)';
+      ctx.lineWidth = 1;
+      for (let x = 40; x < 640; x += 40) {
+        ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, 480); ctx.stroke();
+      }
+      for (let y = 40; y < 480; y += 40) {
+        ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(640, y); ctx.stroke();
+      }
+
+      // Speaking aura
+      const pulse = Math.sin(frame * 0.08) * 10;
+      const auraGrad = ctx.createRadialGradient(320, 220, 50, 320, 220, 105 + pulse);
+      auraGrad.addColorStop(0, 'rgba(35, 165, 90, 0.4)');
+      auraGrad.addColorStop(1, 'rgba(35, 165, 90, 0)');
+      ctx.fillStyle = auraGrad;
+      ctx.beginPath();
+      ctx.arc(320, 220, 105 + pulse, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Avatar circle
+      ctx.fillStyle = f.avatarBg || '#23a55a';
+      ctx.beginPath();
+      ctx.arc(320, 220, 75, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.lineWidth = 4;
+      ctx.strokeStyle = '#23a55a';
+      ctx.stroke();
+
+      // Initials text
+      ctx.fillStyle = '#ffffff';
+      ctx.font = 'bold 44px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(f.avatarText || 'SA', 320, 220);
+
+      // Name label
+      ctx.fillStyle = '#f2f3f5';
+      ctx.font = '600 20px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+      ctx.fillText(f.name, 320, 335);
+
+      // Status pill
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.65)';
+      ctx.beginPath();
+      ctx.roundRect ? ctx.roundRect(200, 365, 240, 32, 16) : ctx.rect(200, 365, 240, 32);
+      ctx.fill();
+
+      ctx.fillStyle = '#23a55a';
+      ctx.beginPath();
+      ctx.arc(224, 381, 5, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.fillStyle = '#dbdee1';
+      ctx.font = '500 13px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+      ctx.textAlign = 'left';
+      ctx.fillText('Friend Webcam • 720p', 238, 386);
+
+      requestAnimationFrame(draw);
+    };
+
+    requestAnimationFrame(draw);
+    return canvas.captureStream ? canvas.captureStream(30) : null;
+  }
+
   endDirectCall() {
     if (this.callTimerInterval) clearInterval(this.callTimerInterval);
     if (this.remoteSpeakingInterval) clearInterval(this.remoteSpeakingInterval);
 
     const callOverlay = document.getElementById('direct-call-overlay');
     if (callOverlay) callOverlay.style.display = 'none';
+
+    if (window.voiceController?.isCameraOn) {
+      window.voiceController.stopCamera();
+    }
+    if (window.stateManager?.state?.isScreenSharing) {
+      window.voiceController.stopScreenShare();
+    }
+
+    const localCard = document.getElementById('direct-call-local-card');
+    if (localCard) {
+      localCard.classList.remove('has-video');
+      const v = localCard.querySelector('video');
+      if (v) v.remove();
+    }
+    const remoteCard = document.getElementById('direct-call-remote-card');
+    if (remoteCard) {
+      remoteCard.classList.remove('has-video');
+      const v = remoteCard.querySelector('video');
+      if (v) v.remove();
+    }
 
     if (window.audioEngine) {
       window.audioEngine.stopRingtone();
@@ -896,7 +1101,43 @@ class UIController {
     }
 
     stage.style.display = 'grid';
+
+    // Preserve active video elements to prevent stream disruption and decoders rebuilding
+    const cachedVoiceVideos = new Map();
+    stage.querySelectorAll('video').forEach(vid => {
+      const key = vid.dataset.streamKey;
+      if (key && vid.srcObject) {
+        cachedVoiceVideos.set(key, vid);
+      }
+    });
+
     stage.innerHTML = '';
+
+    const getOrCreateVoiceVideo = (streamKey, stream, styles = {}, isMirrored = false) => {
+      let vid = cachedVoiceVideos.get(streamKey);
+      if (vid && vid.srcObject === stream) {
+        cachedVoiceVideos.delete(streamKey);
+        Object.assign(vid.style, styles);
+        if (isMirrored) vid.style.transform = 'scaleX(-1) translateZ(0)';
+        return vid;
+      }
+      vid = document.createElement('video');
+      vid.dataset.streamKey = streamKey;
+      vid.autoplay = true;
+      vid.playsInline = true;
+      vid.muted = true;
+      vid.srcObject = stream;
+      Object.assign(vid.style, {
+        width: '100%',
+        height: '100%',
+        backgroundColor: '#000',
+        contain: 'layout paint',
+        ...styles
+      });
+      if (isMirrored) vid.style.transform = 'scaleX(-1) translateZ(0)';
+      vid.onloadedmetadata = () => vid.play().catch(e => console.warn(e));
+      return vid;
+    };
 
     const participants = window.stateManager.state.voiceParticipants[chId] || [];
 
@@ -905,18 +1146,9 @@ class UIController {
       const screenTile = document.createElement('div');
       screenTile.className = 'voice-screenshare-tile';
       
-      const vid = document.createElement('video');
-      vid.style.width = '100%';
-      vid.style.height = '100%';
-      vid.style.objectFit = 'contain';
-      vid.style.backgroundColor = '#000';
-      vid.muted = true;
-      vid.autoplay = true;
-      vid.playsInline = true;
-      vid.srcObject = window.voiceController.screenStream;
-      vid.onloadedmetadata = () => {
-        vid.play().catch(e => console.warn('Local screen video play error:', e));
-      };
+      const vid = getOrCreateVoiceVideo('voice-screen-local', window.voiceController.screenStream, {
+        objectFit: 'contain'
+      }, false);
 
       const overlay = document.createElement('div');
       overlay.className = 'screen-share-preview';
@@ -925,8 +1157,14 @@ class UIController {
       overlay.style.left = '10px';
       overlay.innerHTML = `<div class="screen-share-title" style="background: rgba(0,0,0,0.6); padding: 4px 8px; border-radius: 4px;">You are sharing screen</div>`;
       
+      const stopBtn = document.createElement('button');
+      stopBtn.className = 'tile-stop-btn';
+      stopBtn.textContent = 'Stop Sharing';
+      stopBtn.onclick = () => window.voiceController.stopScreenShare();
+
       screenTile.appendChild(vid);
       screenTile.appendChild(overlay);
+      screenTile.appendChild(stopBtn);
       stage.appendChild(screenTile);
     }
 
@@ -935,19 +1173,9 @@ class UIController {
       const camTile = document.createElement('div');
       camTile.className = 'voice-screenshare-tile';
       
-      const vid = document.createElement('video');
-      vid.style.width = '100%';
-      vid.style.height = '100%';
-      vid.style.objectFit = 'cover';
-      vid.style.backgroundColor = '#000';
-      vid.style.transform = 'scaleX(-1)'; // Mirror camera
-      vid.muted = true;
-      vid.autoplay = true;
-      vid.playsInline = true;
-      vid.srcObject = window.voiceController.cameraStream;
-      vid.onloadedmetadata = () => {
-        vid.play().catch(e => console.warn('Local camera video play error:', e));
-      };
+      const vid = getOrCreateVoiceVideo('voice-cam-local', window.voiceController.cameraStream, {
+        objectFit: 'cover'
+      }, true);
 
       const overlay = document.createElement('div');
       overlay.className = 'screen-share-preview';
@@ -956,8 +1184,14 @@ class UIController {
       overlay.style.left = '10px';
       overlay.innerHTML = `<div class="screen-share-title" style="background: rgba(0,0,0,0.6); padding: 4px 8px; border-radius: 4px;">Your Camera</div>`;
       
+      const stopCamBtn = document.createElement('button');
+      stopCamBtn.className = 'tile-stop-btn';
+      stopCamBtn.textContent = 'Stop Camera';
+      stopCamBtn.onclick = () => window.voiceController.stopCamera();
+
       camTile.appendChild(vid);
       camTile.appendChild(overlay);
+      camTile.appendChild(stopCamBtn);
       stage.appendChild(camTile);
     }
 
@@ -1015,18 +1249,9 @@ class UIController {
           remoteScreenTile.appendChild(watchBtn);
 
         } else {
-          const vid = document.createElement('video');
-          vid.style.width = '100%';
-          vid.style.height = '100%';
-          vid.style.objectFit = 'contain';
-          vid.style.backgroundColor = '#000';
-          vid.muted = true; // Audio is handled separately
-          vid.autoplay = true;
-          vid.playsInline = true;
-          vid.srcObject = p.remoteStream;
-          vid.onloadedmetadata = () => {
-            vid.play().catch(e => console.warn('Remote screen video play error:', e));
-          };
+          const vid = getOrCreateVoiceVideo(`voice-remote-${p.id}`, p.remoteStream, {
+            objectFit: 'contain'
+          }, false);
 
           const overlay = document.createElement('div');
           overlay.className = 'screen-share-preview';
@@ -1106,6 +1331,15 @@ class UIController {
 
       stage.appendChild(card);
     });
+
+    // Clean up any unconsumed video elements
+    cachedVoiceVideos.forEach(oldVid => {
+      try {
+        oldVid.pause();
+        oldVid.srcObject = null;
+      } catch (e) {}
+    });
+    cachedVoiceVideos.clear();
   }
 
   // 7B. Render Google Meet & Conference Stage Viewport
@@ -1284,6 +1518,31 @@ class UIController {
     const isHandRaised = state.isHandRaised;
     const mode = state.meetViewMode || 'grid';
 
+    // Ensure current user is in participants list when active in voice channel
+    const me = state.currentUser;
+    let myParticipant = participants.find(p => p.id === me.id);
+    if (!myParticipant) {
+      myParticipant = {
+        id: me.id,
+        name: me.name,
+        avatarText: me.avatarText,
+        avatarBg: me.avatarBg,
+        avatarPhoto: me.avatarPhoto || null,
+        isSpeaking: false,
+        isMuted: isMuted,
+        isHandRaised: isHandRaised,
+        isCameraOn: !!isCameraOn,
+        isSharingScreen: !!isScreenSharing
+      };
+      participants.unshift(myParticipant);
+      state.voiceParticipants[chId] = participants;
+    } else {
+      myParticipant.isCameraOn = !!isCameraOn;
+      myParticipant.isSharingScreen = !!isScreenSharing;
+      myParticipant.isMuted = isMuted;
+      myParticipant.isHandRaised = isHandRaised;
+    }
+
     // 1. Update Header Buttons
     const btnSpotlight = document.getElementById('btn-meet-mode-spotlight');
     const btnGrid = document.getElementById('btn-meet-mode-grid');
@@ -1326,7 +1585,40 @@ class UIController {
       dockPeopleBadge.textContent = String(totalCount || 1);
     }
 
+    // Video element caching to prevent tearing down media decoders on every stage render
+    const cachedVideos = new Map();
+    body.querySelectorAll('video').forEach(vid => {
+      const key = vid.dataset.streamKey;
+      if (key && vid.srcObject) {
+        cachedVideos.set(key, vid);
+      }
+    });
+
     body.innerHTML = '';
+
+    const getOrCreateVideo = (streamKey, stream, className, isMirrored = false) => {
+      let vid = cachedVideos.get(streamKey);
+      if (vid && vid.srcObject === stream) {
+        cachedVideos.delete(streamKey);
+        vid.className = className;
+        if (isMirrored) {
+          vid.classList.add('mirrored');
+        } else {
+          vid.classList.remove('mirrored');
+        }
+        return vid;
+      }
+      vid = document.createElement('video');
+      vid.className = className;
+      vid.dataset.streamKey = streamKey;
+      vid.autoplay = true;
+      vid.playsInline = true;
+      vid.muted = true;
+      vid.srcObject = stream;
+      if (isMirrored) vid.classList.add('mirrored');
+      vid.onloadedmetadata = () => vid.play().catch(e => console.warn('Stage video play error:', e));
+      return vid;
+    };
 
     // Active presenter check (Screen sharer takes highest priority, NEVER fallback to fake Sourabh Singh!)
     const activePresenter = isLocalSharing
@@ -1359,9 +1651,23 @@ class UIController {
           return;
         }
 
+        const isMe = p.id === state.currentUser.id;
+        const hasCamera = isMe 
+          ? (isCameraOn && !!window.voiceController?.cameraStream)
+          : (p.isCameraOn && !!(p.remoteVideoStream || p.remoteStream));
+        const videoStream = isMe 
+          ? window.voiceController?.cameraStream 
+          : (p.remoteVideoStream || p.remoteStream);
+
         const tile = document.createElement('div');
-        tile.className = `meet-tile ${p.isSpeaking ? 'speaking' : ''}`;
+        tile.className = `meet-tile ${p.isSpeaking ? 'speaking' : ''} ${hasCamera ? 'has-video' : ''}`;
         tile.id = `meet-tile-${p.id}`;
+
+        if (hasCamera && videoStream) {
+          const streamKey = isMe ? 'grid-cam-me' : `grid-cam-${p.id}`;
+          const vid = getOrCreateVideo(streamKey, videoStream, 'meet-tile-video', isMe);
+          tile.appendChild(vid);
+        }
 
         const hasPhoto = !!p.avatarPhoto;
         const avatarStyle = hasPhoto
@@ -1369,20 +1675,35 @@ class UIController {
           : `background-color: ${p.avatarBg || '#5865F2'};`;
         const avatarText = hasPhoto ? '' : this.getSafeAvatarInitials(p);
 
-        tile.innerHTML = `
-          <div class="meet-tile-avatar" style="${avatarStyle}">
-            ${avatarText}
-          </div>
-          <div class="meet-tile-name-pill">
-            ${p.isPresenter ? '📌 ' : ''}${p.name}
-          </div>
-          <div class="meet-tile-mic-badge ${p.isMuted ? 'muted' : ''}">
-            ${p.isMuted 
-              ? '<svg viewBox="0 0 24 24" width="12" height="12"><path fill="#ffffff" d="M19 11h-1.7c0 .74-.16 1.43-.43 2.05l1.23 1.23c.56-.98.9-2.09.9-3.28zm-4.02.17c0-.06.02-.11.02-.17V5c0-1.66-1.34-3-3-3S9 3.34 9 5v.18l5.98 5.99zM4.27 3L3 4.27l6.01 6.01V11c0 1.66 1.33 3 2.99 3 .22 0 .44-.03.65-.08l1.66 1.66c-.71.33-1.5.52-2.31.52-2.76 0-5.3-2.24-5.3-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c1.33-.19 2.53-.74 3.53-1.54l3.2 3.2L21 18.27 4.27 3z"/></svg>' 
-              : '<svg viewBox="0 0 24 24" width="12" height="12"><path fill="#23a55a" d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z"/></svg>'}
-          </div>
-          ${p.isHandRaised ? '<div class="meet-hand-raised-badge">✋</div>' : ''}
+        const avatarEl = document.createElement('div');
+        avatarEl.className = 'meet-tile-avatar';
+        avatarEl.style.cssText = avatarStyle;
+        if (hasCamera) avatarEl.style.display = 'none';
+        avatarEl.textContent = avatarText;
+        tile.appendChild(avatarEl);
+
+        const namePill = document.createElement('div');
+        namePill.className = 'meet-tile-name-pill';
+        namePill.innerHTML = `
+          ${p.isPresenter ? '📌 ' : ''}${p.name}
+          ${hasCamera ? '<span class="meet-cam-indicator" title="Camera Active">📷</span>' : ''}
         `;
+        tile.appendChild(namePill);
+
+        const micBadge = document.createElement('div');
+        micBadge.className = `meet-tile-mic-badge ${p.isMuted ? 'muted' : ''}`;
+        micBadge.innerHTML = p.isMuted 
+          ? '<svg viewBox="0 0 24 24" width="12" height="12"><path fill="#ffffff" d="M19 11h-1.7c0 .74-.16 1.43-.43 2.05l1.23 1.23c.56-.98.9-2.09.9-3.28zm-4.02.17c0-.06.02-.11.02-.17V5c0-1.66-1.34-3-3-3S9 3.34 9 5v.18l5.98 5.99zM4.27 3L3 4.27l6.01 6.01V11c0 1.66 1.33 3 2.99 3 .22 0 .44-.03.65-.08l1.66 1.66c-.71.33-1.5.52-2.31.52-2.76 0-5.3-2.24-5.3-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c1.33-.19 2.53-.74 3.53-1.54l3.2 3.2L21 18.27 4.27 3z"/></svg>' 
+          : '<svg viewBox="0 0 24 24" width="12" height="12"><path fill="#23a55a" d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z"/></svg>';
+        tile.appendChild(micBadge);
+
+        if (p.isHandRaised) {
+          const handBadge = document.createElement('div');
+          handBadge.className = 'meet-hand-raised-badge';
+          handBadge.textContent = '✋';
+          tile.appendChild(handBadge);
+        }
+
         tile.onclick = (e) => this.openMemberProfilePopover(p, e);
         gridContainer.appendChild(tile);
       });
@@ -1493,13 +1814,7 @@ class UIController {
         `;
         viewport.appendChild(hud);
 
-        const vid = document.createElement('video');
-        vid.className = 'meet-video-screen';
-        vid.muted = true;
-        vid.autoplay = true;
-        vid.playsInline = true;
-        vid.srcObject = window.voiceController.screenStream;
-        vid.onloadedmetadata = () => vid.play().catch(e => console.warn(e));
+        const vid = getOrCreateVideo('spotlight-screen-local', window.voiceController.screenStream, 'meet-video-screen', false);
         viewport.appendChild(vid);
       } else if (remoteScreenPeer) {
         viewport.classList.add('has-video');
@@ -1521,12 +1836,8 @@ class UIController {
         `;
         viewport.appendChild(hud);
 
-        const vid = document.createElement('video');
-        vid.className = 'meet-video-screen';
-        vid.autoplay = true;
-        vid.playsInline = true;
-        vid.srcObject = remoteScreenPeer.remoteVideoStream || remoteScreenPeer.remoteStream;
-        vid.onloadedmetadata = () => vid.play().catch(e => console.warn(e));
+        const rStream = remoteScreenPeer.remoteVideoStream || remoteScreenPeer.remoteStream;
+        const vid = getOrCreateVideo(`spotlight-screen-${remoteScreenPeer.id}`, rStream, 'meet-video-screen', false);
         viewport.appendChild(vid);
       } else if (isDocPresenting) {
         // Document Paper View
@@ -1575,31 +1886,52 @@ class UIController {
         viewport.appendChild(capsule);
       } else {
         // Speaker Hero Spotlight (when in spotlight mode without doc or screenshare)
+        const isSpotlightMe = spotlightUser.id === state.currentUser.id;
+        const spotlightHasCam = isSpotlightMe
+          ? (isCameraOn && !!window.voiceController?.cameraStream)
+          : (spotlightUser.isCameraOn && !!(spotlightUser.remoteVideoStream || spotlightUser.remoteStream));
+        const spotlightVideo = isSpotlightMe
+          ? window.voiceController?.cameraStream
+          : (spotlightUser.remoteVideoStream || spotlightUser.remoteStream);
+
         const heroTile = document.createElement('div');
-        heroTile.className = `meet-hero-tile ${spotlightUser.isSpeaking ? 'speaking' : ''}`;
+        heroTile.className = `meet-hero-tile ${spotlightUser.isSpeaking ? 'speaking' : ''} ${spotlightHasCam ? 'has-video' : ''}`;
+
+        if (spotlightHasCam && spotlightVideo) {
+          const streamKey = isSpotlightMe ? 'spotlight-hero-me' : `spotlight-hero-${spotlightUser.id}`;
+          const vid = getOrCreateVideo(streamKey, spotlightVideo, isSpotlightMe ? 'mirrored' : '', isSpotlightMe);
+          heroTile.appendChild(vid);
+        }
+
         const hasPhoto = !!spotlightUser.avatarPhoto;
         const avatarStyle = hasPhoto
           ? `background-image: url('${spotlightUser.avatarPhoto}');`
           : `background-color: ${spotlightUser.avatarBg || '#5865F2'};`;
         const avatarContent = hasPhoto ? '' : presenterInitials;
 
-        heroTile.innerHTML = `
-          <div class="meet-hero-avatar" style="${avatarStyle}">
-            ${avatarContent}
+        const avatarEl = document.createElement('div');
+        avatarEl.className = 'meet-hero-avatar';
+        avatarEl.style.cssText = avatarStyle;
+        if (spotlightHasCam) avatarEl.style.display = 'none';
+        avatarEl.textContent = avatarContent;
+        heroTile.appendChild(avatarEl);
+
+        const infoEl = document.createElement('div');
+        infoEl.className = 'meet-hero-info';
+        infoEl.innerHTML = `
+          <div class="meet-hero-name">
+            <span>${spotlightUser.name}</span>
+            ${spotlightHasCam ? '<span class="meet-cam-indicator" title="Camera Active">📷</span>' : ''}
+            ${spotlightUser.isMuted 
+              ? '<span style="color:#ea4335; font-size:14px;" title="Muted">🔇</span>' 
+              : '<span style="color:#23a55a; font-size:14px;" title="Mic Active">🎤</span>'}
+            ${spotlightUser.isHandRaised ? '<span>✋</span>' : ''}
           </div>
-          <div class="meet-hero-info">
-            <div class="meet-hero-name">
-              <span>${spotlightUser.name}</span>
-              ${spotlightUser.isMuted 
-                ? '<span style="color:#ea4335; font-size:14px;" title="Muted">🔇</span>' 
-                : '<span style="color:#23a55a; font-size:14px;" title="Mic Active">🎤</span>'}
-              ${spotlightUser.isHandRaised ? '<span>✋</span>' : ''}
-            </div>
-            <div class="meet-hero-status">
-              ${spotlightUser.isSpeaking ? 'Speaking now...' : (spotlightUser.handle || 'In Voice Channel')}
-            </div>
+          <div class="meet-hero-status">
+            ${spotlightUser.isSpeaking ? 'Speaking now...' : (spotlightUser.handle || 'In Voice Channel')}
           </div>
         `;
+        heroTile.appendChild(infoEl);
         viewport.appendChild(heroTile);
       }
 
@@ -1626,20 +1958,36 @@ class UIController {
         sidebar.className = 'meet-participants-sidebar';
 
         // 1. Top Card (Spotlight User)
+        const isPresMe = spotlightUser.id === state.currentUser.id;
+        const presHasCam = isPresMe
+          ? (isCameraOn && !!window.voiceController?.cameraStream)
+          : (spotlightUser.isCameraOn && !!(spotlightUser.remoteVideoStream || spotlightUser.remoteStream));
+        const presVideo = isPresMe
+          ? window.voiceController?.cameraStream
+          : (spotlightUser.remoteVideoStream || spotlightUser.remoteStream);
+
         const presenterCard = document.createElement('div');
-        presenterCard.className = `meet-presenter-card ${spotlightUser.isSpeaking ? 'speaking' : ''}`;
+        presenterCard.className = `meet-presenter-card ${spotlightUser.isSpeaking ? 'speaking' : ''} ${presHasCam ? 'has-video' : ''}`;
         presenterCard.id = `meet-tile-${spotlightUser.id}`;
-        presenterCard.innerHTML = `
+
+        if (presHasCam && presVideo) {
+          const streamKey = isPresMe ? 'sidebar-pres-me' : `sidebar-pres-${spotlightUser.id}`;
+          const vid = getOrCreateVideo(streamKey, presVideo, 'meet-tile-video', isPresMe);
+          presenterCard.appendChild(vid);
+        }
+
+        presenterCard.innerHTML += `
           <div class="meet-audio-wave">
             <div class="wave-bar"></div>
             <div class="wave-bar"></div>
             <div class="wave-bar"></div>
           </div>
-          <div class="meet-presenter-avatar-large" style="background-color: ${spotlightUser.avatarBg || '#3c4043'};">
+          <div class="meet-presenter-avatar-large" style="background-color: ${spotlightUser.avatarBg || '#3c4043'}; ${presHasCam ? 'display: none;' : ''}">
             ${presenterInitials}
           </div>
           <div class="meet-tile-name-pill">
             📌 ${spotlightUser.name} ${spotlightUser.handle || ''}
+            ${presHasCam ? '<span class="meet-cam-indicator" title="Camera Active">📷</span>' : ''}
           </div>
         `;
         presenterCard.onclick = (e) => this.openMemberProfilePopover(spotlightUser, e);
@@ -1666,9 +2014,23 @@ class UIController {
             return;
           }
 
+          const isMe = p.id === state.currentUser.id;
+          const hasCam = isMe
+            ? (isCameraOn && !!window.voiceController?.cameraStream)
+            : (p.isCameraOn && !!(p.remoteVideoStream || p.remoteStream));
+          const vStream = isMe
+            ? window.voiceController?.cameraStream
+            : (p.remoteVideoStream || p.remoteStream);
+
           const tile = document.createElement('div');
-          tile.className = `meet-tile ${p.isSpeaking ? 'speaking' : ''}`;
+          tile.className = `meet-tile ${p.isSpeaking ? 'speaking' : ''} ${hasCam ? 'has-video' : ''}`;
           tile.id = `meet-tile-${p.id}`;
+
+          if (hasCam && vStream) {
+            const streamKey = isMe ? 'sidebar-cam-me' : `sidebar-cam-${p.id}`;
+            const vid = getOrCreateVideo(streamKey, vStream, 'meet-tile-video', isMe);
+            tile.appendChild(vid);
+          }
 
           const hasPhoto = !!p.avatarPhoto;
           const avatarStyle = hasPhoto
@@ -1676,20 +2038,35 @@ class UIController {
             : `background-color: ${p.avatarBg || '#5865F2'};`;
           const avatarText = hasPhoto ? '' : this.getSafeAvatarInitials(p);
 
-          tile.innerHTML = `
-            <div class="meet-tile-avatar" style="${avatarStyle}">
-              ${avatarText}
-            </div>
-            <div class="meet-tile-name-pill">
-              ${p.name}
-            </div>
-            <div class="meet-tile-mic-badge ${p.isMuted ? 'muted' : ''}">
-              ${p.isMuted 
-                ? '<svg viewBox="0 0 24 24" width="12" height="12"><path fill="#ffffff" d="M19 11h-1.7c0 .74-.16 1.43-.43 2.05l1.23 1.23c.56-.98.9-2.09.9-3.28zm-4.02.17c0-.06.02-.11.02-.17V5c0-1.66-1.34-3-3-3S9 3.34 9 5v.18l5.98 5.99zM4.27 3L3 4.27l6.01 6.01V11c0 1.66 1.33 3 2.99 3 .22 0 .44-.03.65-.08l1.66 1.66c-.71.33-1.5.52-2.31.52-2.76 0-5.3-2.24-5.3-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c1.33-.19 2.53-.74 3.53-1.54l3.2 3.2L21 18.27 4.27 3z"/></svg>' 
-                : '<svg viewBox="0 0 24 24" width="12" height="12"><path fill="#23a55a" d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z"/></svg>'}
-            </div>
-            ${p.isHandRaised ? '<div class="meet-hand-raised-badge">✋</div>' : ''}
+          const avatarEl = document.createElement('div');
+          avatarEl.className = 'meet-tile-avatar';
+          avatarEl.style.cssText = avatarStyle;
+          if (hasCam) avatarEl.style.display = 'none';
+          avatarEl.textContent = avatarText;
+          tile.appendChild(avatarEl);
+
+          const namePill = document.createElement('div');
+          namePill.className = 'meet-tile-name-pill';
+          namePill.innerHTML = `
+            ${p.name}
+            ${hasCam ? '<span class="meet-cam-indicator" title="Camera Active">📷</span>' : ''}
           `;
+          tile.appendChild(namePill);
+
+          const micBadge = document.createElement('div');
+          micBadge.className = `meet-tile-mic-badge ${p.isMuted ? 'muted' : ''}`;
+          micBadge.innerHTML = p.isMuted 
+            ? '<svg viewBox="0 0 24 24" width="12" height="12"><path fill="#ffffff" d="M19 11h-1.7c0 .74-.16 1.43-.43 2.05l1.23 1.23c.56-.98.9-2.09.9-3.28zm-4.02.17c0-.06.02-.11.02-.17V5c0-1.66-1.34-3-3-3S9 3.34 9 5v.18l5.98 5.99zM4.27 3L3 4.27l6.01 6.01V11c0 1.66 1.33 3 2.99 3 .22 0 .44-.03.65-.08l1.66 1.66c-.71.33-1.5.52-2.31.52-2.76 0-5.3-2.24-5.3-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c1.33-.19 2.53-.74 3.53-1.54l3.2 3.2L21 18.27 4.27 3z"/></svg>' 
+            : '<svg viewBox="0 0 24 24" width="12" height="12"><path fill="#23a55a" d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z"/></svg>';
+          tile.appendChild(micBadge);
+
+          if (p.isHandRaised) {
+            const handBadge = document.createElement('div');
+            handBadge.className = 'meet-hand-raised-badge';
+            handBadge.textContent = '✋';
+            tile.appendChild(handBadge);
+          }
+
           tile.onclick = (e) => this.openMemberProfilePopover(p, e);
           grid.appendChild(tile);
         });
@@ -1698,6 +2075,15 @@ class UIController {
         body.appendChild(sidebar);
       }
     }
+
+    // Clean up any remaining cached videos that were not reused (e.g. camera turned off)
+    cachedVideos.forEach(oldVid => {
+      try {
+        oldVid.pause();
+        oldVid.srcObject = null;
+      } catch (e) {}
+    });
+    cachedVideos.clear();
 
     // 4. In-Call Drawer Rendering
     const drawer = document.getElementById('meet-side-drawer');
@@ -1814,8 +2200,11 @@ class UIController {
             <button class="friend-action-btn" title="Message" onclick="window.uiController.openDirectMessageChat(${JSON.stringify(f).replace(/"/g, '&quot;')})">
               <svg viewBox="0 0 24 24" width="18" height="18"><path fill="currentColor" d="M20 2H4c-1.1 0-1.99.9-1.99 2L2 22l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z"/></svg>
             </button>
-            <button class="friend-action-btn" title="Call" onclick="window.audioEngine.playCallRing()">
+            <button class="friend-action-btn" title="Voice Call" onclick="window.uiController.startDirectCall('${f.id}', '${f.name}', '${f.avatarText}', '${f.avatarBg}', false)">
               <svg viewBox="0 0 24 24" width="18" height="18"><path fill="currentColor" d="M20.01 15.38c-1.23 0-2.42-.2-3.53-.56a.977.977 0 0 0-1.01.24l-1.57 1.97c-2.83-1.35-5.48-3.9-6.89-6.83l1.95-1.66c.27-.28.35-.67.24-1.02-.37-1.11-.56-2.3-.56-3.53 0-.54-.45-.99-.99-.99H4.19C3.65 3 3 3.24 3 3.99 3 13.28 10.73 21 20.01 21c.71 0 .99-.63.99-1.18v-3.45c0-.54-.45-.99-.99-.99z"/></svg>
+            </button>
+            <button class="friend-action-btn" title="Video Call" onclick="window.uiController.startDirectCall('${f.id}', '${f.name}', '${f.avatarText}', '${f.avatarBg}', true)">
+              <svg viewBox="0 0 24 24" width="18" height="18"><path fill="currentColor" d="M17 10.5V7c0-.55-.45-1-1-1H4c-.55 0-1 .45-1 1v10c0 .55.45 1 1 1h12c.55 0 1-.45 1-1v-3.5l4 4v-11l-4 4z"/></svg>
             </button>
           </div>
         `;

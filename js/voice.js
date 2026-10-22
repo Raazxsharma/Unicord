@@ -363,42 +363,171 @@ class VoiceController {
     window.uiController.renderChannels();
   }
 
+  createSimulatedCameraStream() {
+    const canvas = document.createElement('canvas');
+    canvas.width = 640;
+    canvas.height = 480;
+    const ctx = canvas.getContext('2d');
+    const me = window.stateManager?.state?.currentUser || { name: 'Student', avatarBg: '#5865F2' };
+    const initials = (me.name ? me.name.substring(0, 2) : 'ME').toUpperCase();
+
+    let frame = 0;
+    let lastRenderTime = 0;
+    const frameInterval = 1000 / 30; // 30 FPS target for high efficiency
+
+    const draw = (currentTime) => {
+      if (!this.isCameraOn && !this.isDirectCallCameraOn) return;
+      if (!currentTime) currentTime = performance.now();
+      const delta = currentTime - lastRenderTime;
+
+      if (delta >= frameInterval) {
+        lastRenderTime = currentTime - (delta % frameInterval);
+        frame++;
+
+        // Modern dark gradient background
+        const grad = ctx.createLinearGradient(0, 0, 640, 480);
+        grad.addColorStop(0, '#1a1c23');
+        grad.addColorStop(1, '#0e1015');
+        ctx.fillStyle = grad;
+        ctx.fillRect(0, 0, 640, 480);
+
+        // Subtle dynamic tech grid
+        ctx.strokeStyle = 'rgba(88, 101, 242, 0.12)';
+        ctx.lineWidth = 1;
+        for (let x = 40; x < 640; x += 40) {
+          ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, 480); ctx.stroke();
+        }
+        for (let y = 40; y < 480; y += 40) {
+          ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(640, y); ctx.stroke();
+        }
+
+        // Pulsing glow ring
+        const pulse = Math.sin(frame * 0.05) * 12;
+        const auraGrad = ctx.createRadialGradient(320, 220, 60, 320, 220, 110 + pulse);
+        auraGrad.addColorStop(0, 'rgba(88, 101, 242, 0.35)');
+        auraGrad.addColorStop(1, 'rgba(88, 101, 242, 0)');
+        ctx.fillStyle = auraGrad;
+        ctx.beginPath();
+        ctx.arc(320, 220, 110 + pulse, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Avatar circle
+        ctx.fillStyle = me.avatarBg || '#5865F2';
+        ctx.beginPath();
+        ctx.arc(320, 220, 75, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.lineWidth = 4;
+        ctx.strokeStyle = '#23a55a';
+        ctx.stroke();
+
+        // Initials text
+        ctx.fillStyle = '#ffffff';
+        ctx.font = 'bold 44px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(initials, 320, 220);
+
+        // Name label
+        ctx.fillStyle = '#f2f3f5';
+        ctx.font = '600 20px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+        ctx.fillText(me.name, 320, 335);
+
+        // Status pill
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.65)';
+        ctx.beginPath();
+        ctx.roundRect ? ctx.roundRect(200, 365, 240, 32, 16) : ctx.rect(200, 365, 240, 32);
+        ctx.fill();
+
+        ctx.fillStyle = '#23a55a';
+        ctx.beginPath();
+        ctx.arc(224, 381, 5, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.fillStyle = '#dbdee1';
+        ctx.font = '500 13px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+        ctx.textAlign = 'left';
+        ctx.fillText('Live HD Video • 720p', 238, 386);
+      }
+
+      this.simulatedAnimId = requestAnimationFrame(draw);
+    };
+
+    draw(performance.now());
+    return canvas.captureStream ? canvas.captureStream(30) : null;
+  }
+
   async toggleCamera() {
     if (this.isCameraOn) {
       this.stopCamera();
-    } else {
-      try {
-        if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
-          this.cameraStream = await navigator.mediaDevices.getUserMedia({
-            video: { width: { ideal: 640 }, height: { ideal: 480 }, facingMode: 'user' },
-            audio: false
-          });
-          this.cameraStream.getVideoTracks().forEach(track => {
-            track.onended = () => this.stopCamera();
-          });
-        }
-        this.isCameraOn = true;
-      } catch (e) {
-        console.warn('[UniCord Camera] Camera permission or device unavailable, using simulated video', e);
-        this.isCameraOn = true;
-      }
+      return;
     }
-    if (window.networkEngine) window.networkEngine.reconnectWebRTC();
+
+    try {
+      if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+        this.cameraStream = await navigator.mediaDevices.getUserMedia({
+          video: {
+            width: { ideal: 1280, max: 1920 },
+            height: { ideal: 720, max: 1080 },
+            frameRate: { ideal: 30, min: 24, max: 60 },
+            facingMode: 'user'
+          },
+          audio: false
+        });
+      }
+    } catch (e) {
+      console.warn('[UniCord Camera] Hardware camera unavailable, generating HD virtual video stream:', e);
+      this.cameraStream = this.createSimulatedCameraStream();
+    }
+
+    if (!this.cameraStream) {
+      this.cameraStream = this.createSimulatedCameraStream();
+    }
+
+    if (this.cameraStream) {
+      this.cameraStream.getVideoTracks().forEach(track => {
+        if ('contentHint' in track) {
+          track.contentHint = 'motion';
+        }
+        track.onended = () => this.stopCamera();
+      });
+      this.isCameraOn = true;
+    }
+
+    if (window.networkEngine) {
+      window.networkEngine.broadcastStreamStatus(true, window.stateManager.state.isScreenSharing);
+      window.networkEngine.updateWebRTCTracks();
+    }
+
     window.uiController.renderVoiceStage();
     window.uiController.renderMeetStage();
     window.uiController.updateVoiceConnectionUI(true);
+    if (window.uiController.updateDirectCallVideos) {
+      window.uiController.updateDirectCallVideos();
+    }
   }
 
   stopCamera() {
+    if (this.simulatedAnimId) {
+      cancelAnimationFrame(this.simulatedAnimId);
+      this.simulatedAnimId = null;
+    }
     if (this.cameraStream) {
       this.cameraStream.getTracks().forEach(t => t.stop());
       this.cameraStream = null;
     }
     this.isCameraOn = false;
-    if (window.networkEngine) window.networkEngine.reconnectWebRTC();
+
+    if (window.networkEngine) {
+      window.networkEngine.broadcastStreamStatus(false, window.stateManager.state.isScreenSharing);
+      window.networkEngine.updateWebRTCTracks();
+    }
+
     window.uiController.renderVoiceStage();
     window.uiController.renderMeetStage();
     window.uiController.updateVoiceConnectionUI(true);
+    if (window.uiController.updateDirectCallVideos) {
+      window.uiController.updateDirectCallVideos();
+    }
   }
 
   async toggleScreenShare() {
@@ -411,22 +540,44 @@ class VoiceController {
       if (navigator.mediaDevices && navigator.mediaDevices.getDisplayMedia) {
         this.screenStream = await navigator.mediaDevices.getDisplayMedia({
           video: {
+            cursor: 'always',
+            displaySurface: 'monitor',
             width: { ideal: 1920, max: 3840 },
             height: { ideal: 1080, max: 2160 },
-            frameRate: { ideal: 60, max: 60 }
+            frameRate: { ideal: 60, min: 30, max: 60 }
           },
           audio: false
         });
+
         this.screenStream.getVideoTracks().forEach(track => {
-          track.onended = () => this.stopScreenShare();
+          if ('contentHint' in track) {
+            track.contentHint = 'detail';
+          }
+          track.onended = () => {
+            console.log('[UniCord ScreenShare] User stopped sharing via browser UI');
+            this.stopScreenShare();
+          };
         });
+
         window.stateManager.state.isScreenSharing = true;
         window.stateManager.state.meetViewMode = 'spotlight';
         window.stateManager.saveState();
-        if (window.networkEngine) window.networkEngine.reconnectWebRTC();
+
+        if (window.networkEngine) {
+          window.networkEngine.broadcastStreamStatus(this.isCameraOn, true);
+          window.networkEngine.updateWebRTCTracks();
+        }
+
+        this.sendInCallMessage(`🖥️ ${window.stateManager.state.currentUser.name} started sharing screen`);
+      } else {
+        alert('Screen sharing is not supported by your browser environment.');
       }
     } catch (e) {
-      console.warn('[UniCord ScreenShare] User cancelled or permission denied; using presentation preview mode', e);
+      if (e.name === 'NotAllowedError' || e.name === 'AbortError') {
+        console.log('[UniCord ScreenShare] User closed screen share dialog.');
+      } else {
+        console.warn('[UniCord ScreenShare] Screen share error:', e);
+      }
       window.stateManager.state.isScreenSharing = false;
       window.stateManager.saveState();
     }
@@ -434,6 +585,9 @@ class VoiceController {
     window.uiController.renderVoiceStage();
     window.uiController.renderMeetStage();
     window.uiController.updateVoiceConnectionUI(true);
+    if (window.uiController.updateDirectCallVideos) {
+      window.uiController.updateDirectCallVideos();
+    }
   }
 
   stopScreenShare() {
@@ -441,12 +595,25 @@ class VoiceController {
       this.screenStream.getTracks().forEach(t => t.stop());
       this.screenStream = null;
     }
+    const wasSharing = window.stateManager.state.isScreenSharing;
     window.stateManager.state.isScreenSharing = false;
     window.stateManager.saveState();
-    if (window.networkEngine) window.networkEngine.reconnectWebRTC();
+
+    if (window.networkEngine) {
+      window.networkEngine.broadcastStreamStatus(this.isCameraOn, false);
+      window.networkEngine.updateWebRTCTracks();
+    }
+
+    if (wasSharing) {
+      this.sendInCallMessage(`⏹️ ${window.stateManager.state.currentUser.name} stopped sharing screen`);
+    }
+
     window.uiController.renderVoiceStage();
     window.uiController.renderMeetStage();
     window.uiController.updateVoiceConnectionUI(true);
+    if (window.uiController.updateDirectCallVideos) {
+      window.uiController.updateDirectCallVideos();
+    }
   }
 
   handleUserSpeaking(isSpeaking, level) {

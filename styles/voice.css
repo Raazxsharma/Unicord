@@ -140,6 +140,16 @@
   height: 100%;
   object-fit: contain;
   background-color: #000;
+  transform: translateZ(0);
+  will-change: transform;
+  contain: layout paint;
+}
+
+.voice-screenshare-tile video {
+  transform: translateZ(0);
+  will-change: transform;
+  contain: layout paint;
+  backface-visibility: hidden;
 }
 
 .voice-camera-tile {
@@ -159,7 +169,10 @@
   width: 100%;
   height: 100%;
   object-fit: cover;
-  transform: scaleX(-1); /* Mirror camera */
+  transform: scaleX(-1) translateZ(0); /* Mirror camera */
+  will-change: transform;
+  contain: layout paint;
+  backface-visibility: hidden;
 }
 
 .tile-overlay-tag {
@@ -862,6 +875,11 @@
   height: 100%;
   object-fit: contain;
   background: #000000;
+  transform: translateZ(0);
+  will-change: transform;
+  contain: layout paint;
+  image-rendering: -webkit-optimize-contrast;
+  backface-visibility: hidden;
 }
 
 /* Hero Speaker Spotlight (when in spotlight mode without doc/screenshare) */
@@ -1072,6 +1090,89 @@
 
 .meet-tile.speaking .meet-tile-avatar {
   transform: scale(1.08);
+}
+
+/* Video element inside participant tile and presenter card */
+.meet-tile-video {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  background-color: #000;
+  border-radius: 10px;
+  z-index: 1;
+  transform: translateZ(0);
+  will-change: transform;
+  contain: layout paint;
+  backface-visibility: hidden;
+}
+
+.meet-tile-video.mirrored {
+  transform: scaleX(-1) translateZ(0);
+}
+
+.meet-tile.has-video {
+  background: #000;
+}
+
+.meet-tile.has-video .meet-tile-avatar {
+  display: none !important;
+}
+
+.meet-presenter-card.has-video {
+  background: #000;
+}
+
+.meet-presenter-card.has-video .meet-presenter-avatar-large {
+  display: none !important;
+}
+
+.meet-hero-tile.has-video {
+  background: #000;
+}
+
+.meet-hero-tile.has-video .meet-hero-avatar {
+  display: none !important;
+}
+
+.meet-hero-tile video {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  z-index: 1;
+  transform: translateZ(0);
+  will-change: transform;
+  contain: layout paint;
+  backface-visibility: hidden;
+}
+
+.meet-hero-tile video.mirrored {
+  transform: scaleX(-1) translateZ(0);
+}
+
+.meet-hero-tile.has-video .meet-hero-info {
+  z-index: 2;
+  position: absolute;
+  bottom: 16px;
+  left: 16px;
+  background: rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(8px);
+  padding: 8px 16px;
+  border-radius: 8px;
+  margin-top: 0;
+  align-items: flex-start;
+}
+
+.meet-cam-indicator {
+  display: inline-flex;
+  align-items: center;
+  color: #23a55a;
+  margin-left: 4px;
 }
 
 /* Bottom Name Pill (Google Meet Style) */
